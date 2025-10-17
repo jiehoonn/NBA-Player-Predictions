@@ -199,3 +199,74 @@ Launch locally with:
 
 ```bash
 make app
+```
+(default: http://127.0.0.1:8050)
+
+---
+
+## 8) Test Plan (Strict, Time-Based)
+
+### Data slicing
+Use only regular season games, respecting the freeze date **2025-04-15**:
+- **Train:** 2022-10-01 to 2024-12-31  
+- **Validation:** 2025-01-01 to 2025-03-15  
+- **Test (hold-out):** 2025-03-16 to 2025-04-15
+
+### Evaluation metrics
+- Report **MAE** (primary) and **RMSE** (secondary) for each target on the validation and test sets.
+- Compare against baselines; report **absolute values** and **percentage improvement**.
+- Compute **per-player metrics** for the top 20 players by minutes played in the test period.
+
+### Uncertainty quantification
+- Bootstrap the test set (**1,000 resamples**) to compute **95% confidence intervals** for MAE deltas versus baseline.
+
+### Leakage checks
+- Unit tests confirm that all rolling features use **only prior games**.
+- Verify that no **post-game context** leaks (e.g., final ratings or season averages after the game).
+
+### Continuous Integration (CI) tests
+- On every commit/PR, run **unit tests**, **linting**, and a **small pipeline** on a two-week subsample.
+
+### Acceptance criteria
+- The **minimal pipeline** must meet the success criteria listed above across the test period and per-player slice.
+- **Advanced features** are optional and will **not** block acceptance of the project.
+
+---
+
+## 9) Repository Layout
+
+The repository is structured to support modular development and reproducibility:
+
+- `src/`
+  - `data/`: data acquisition scripts and ID mapping
+  - `features/`: feature engineering pipeline
+  - `models/`: training, hyperparameter search, evaluation
+  - `app/`: dashboard code (**optional**)
+  - `utils/`: common helpers (IO, logging, time splits)
+- `data/`
+  - `raw/`, `interim/`, `processed/`, `cache/`, `reference/`
+- `artifacts/`
+  - `models/`, `metrics/`, `shap/`
+- `reports/`
+  - `figures/`, `cleaning/`
+- `docs/`
+  - `data_dictionary.md`, `features.md`, `modeling.md`
+- `tests/`
+  - `unit/`, `integration/`
+- `.github/workflows/`
+  - `ci.yml` (continuous integration pipeline)
+- `Makefile`, `pyproject.toml` (or `requirements.txt`), `README.md`
+
+---
+
+## 10) Prioritisation Plan
+
+Given the **two-month** timeline, our strategy is to deliver the **core pipeline early**, ensuring data collection, cleaning, feature engineering, baseline models, and **one main model** are working end-to-end.
+
+We will then iterate and, **if time permits**:
+- Expand the feature set (e.g., travel distance, opponent positional allowances).
+- Explore additional models.
+- Implement interpretability tools.
+- Build an interactive dashboard.
+
+Any advanced component can be **dropped or postponed** without jeopardising the ability to meet the **core success criteria**.
