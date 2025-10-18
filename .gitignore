@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Data files (raw data can be large; regenerate using scripts)
+data/raw/*.parquet
+data/interim/*.parquet
+data/processed/*.parquet
+data/cache/*.json
+data/cache/*.pkl
+
+# Keep directory structure
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!data/cache/.gitkeep
+!data/reference/.gitkeep
+
+# Model artifacts (can be regenerated)
+artifacts/models/*.joblib
+artifacts/models/*.pkl
+artifacts/metrics/*.json
+artifacts/shap/*.pkl
+
+# Reports (can be regenerated)
+reports/figures/*.png
+reports/figures/*.pdf
+reports/cleaning/*.json
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak

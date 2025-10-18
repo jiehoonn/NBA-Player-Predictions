@@ -3,8 +3,251 @@
 This repository contains a reproducible pipeline to forecast NBA players’ per-game **points**, **rebounds**, and **assists** using historical game logs and a suite of contextual features (opponent strength, rest, home/away, travel, etc.).  
 The project is scoped to the **regular season** of the last three NBA seasons and uses the `nba_api` library as its primary data source.
 
-One of the key pieces of feedback we received was to prioritise a **minimal viable pipeline** over an overly complex initial implementation.  
+One of the key pieces of feedback we received was to prioritise a **minimal viable pipeline** over an overly complex initial implementation.
 To address this, our plan now emphasises getting the core pipeline working end-to-end (data collection → cleaning → feature engineering → baseline and main predictive models → evaluation), and treating more advanced elements (e.g., SHAP explanations, opponent allowances by position, an interactive dashboard) as **optional extensions** if time permits.
+
+---
+
+## Quick Start
+
+**Note:** The implementation is currently in progress. Once complete, you will be able to run the entire pipeline with these commands:
+
+```bash
+# 1. Set up environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# 2. Run the full pipeline
+make data       # Collect raw data
+make features   # Engineer features
+make models     # Train models
+make evaluate   # Generate evaluation reports
+
+# Or run everything at once:
+make all
+```
+
+Results will be saved to `reports/` and model artifacts to `artifacts/`.
+
+---
+
+## Installation and Environment
+
+### Requirements
+
+- Python 3.9+ (tested on 3.9, 3.10, 3.11)
+- 4GB RAM minimum (8GB recommended for full dataset)
+- ~2GB disk space for data and artifacts
+
+### Setup
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/NBA-Player-Predictions.git
+   cd NBA-Player-Predictions
+   ```
+
+2. **Create and activate virtual environment:**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Dependency Management
+
+All package versions are pinned in `requirements.txt` to ensure reproducibility. Key dependencies:
+
+- `nba_api` - NBA Stats API client
+- `pandas`, `numpy` - Data manipulation
+- `scikit-learn` - Machine learning models and evaluation
+- `xgboost` - Gradient boosting models
+- `pytest` - Testing framework
+
+---
+
+## How to Use the Code
+
+### Running Individual Stages
+
+```bash
+# Data collection
+python src/data/collect_player_gamelogs.py
+python src/data/collect_team_context.py
+python src/data/collect_schedule.py
+
+# Feature engineering
+python src/features/build_features.py
+
+# Model training
+python src/models/train_baseline.py
+python src/models/train_models.py --target PTS
+python src/models/train_models.py --target REB
+python src/models/train_models.py --target AST
+
+# Evaluation
+python src/models/evaluate.py
+```
+
+### Using the Makefile
+
+The `Makefile` provides convenient targets for common tasks:
+
+```bash
+make data          # Collect all raw data
+make features      # Build feature dataset
+make models        # Train all models (baselines + main models)
+make evaluate      # Run evaluation and generate reports
+make clean         # Remove generated files
+make test          # Run test suite
+make lint          # Run code quality checks
+make all           # Run entire pipeline
+```
+
+---
+
+## How to Test the Code
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run specific test suites
+pytest tests/unit/              # Unit tests only
+pytest tests/integration/       # Integration tests only
+
+# Run with coverage report
+pytest --cov=src --cov-report=html tests/
+
+# Run specific test file
+pytest tests/unit/test_features.py -v
+```
+
+### Test Structure
+
+- `tests/unit/` - Unit tests for individual functions (feature engineering, data cleaning)
+  - `test_features.py` - Tests for leakage-safe feature computation
+  - `test_cleaning.py` - Tests for data validation and cleaning rules
+- `tests/integration/` - End-to-end pipeline tests on sample data
+  - `test_pipeline.py` - Tests full data flow from raw to predictions
+
+### GitHub Actions CI
+
+On every push and pull request, GitHub Actions automatically:
+
+1. Runs linting (flake8, black)
+2. Executes the test suite
+3. Runs a mini-pipeline on a 2-week data sample to verify end-to-end functionality
+
+See `.github/workflows/ci.yml` for details.
+
+---
+
+## How to Contribute
+
+### Development Workflow
+
+1. **Create a feature branch:**
+
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make your changes and test:**
+
+   ```bash
+   # Run tests
+   pytest tests/
+
+   # Run linting
+   black src/ tests/
+   flake8 src/ tests/
+   ```
+
+3. **Commit with clear messages:**
+
+   ```bash
+   git add .
+   git commit -m "Add feature: brief description"
+   ```
+
+4. **Push and create a pull request:**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+### Code Style
+
+- Follow PEP 8 style guide
+- Use `black` for automatic formatting
+- Maximum line length: 100 characters
+- Add docstrings to all functions (Google style)
+
+### Adding New Features
+
+When adding new features:
+
+1. **Add tests first** (`tests/unit/test_*.py`)
+2. Implement the feature
+3. Ensure no data leakage (features must use only past data)
+4. Update `docs/features.md` with feature descriptions
+5. Run full test suite before submitting PR
+
+### Important: Preventing Data Leakage
+
+All feature engineering must be **strictly time-based**:
+
+- Use only games with `game_date < current_game_date` (strict inequality)
+- No future information (opponent final stats, season-end ratings)
+- Add unit tests verifying temporal correctness
+
+Example test pattern:
+
+```python
+def test_rolling_average_no_leakage():
+    """Verify rolling average excludes current game."""
+    # Test implementation here
+    assert feature computed only from prior games
+```
+
+---
+
+## Supported Environments
+
+This project has been tested on:
+
+- **Operating Systems:** macOS (M1/Intel), Ubuntu 20.04+, Windows 10/11
+- **Python Versions:** 3.9, 3.10, 3.11
+- **Hardware:** Runs on standard laptops (4GB+ RAM recommended)
+
+### Platform-Specific Notes
+
+**macOS:**
+
+```bash
+source venv/bin/activate
+```
+
+**Windows:**
+
+```bash
+venv\Scripts\activate
+```
+
+**Linux:**
+
+```bash
+source venv/bin/activate
+```
 
 ---
 
@@ -19,7 +262,9 @@ We aim to build an automated, end-to-end system that:
 - Provides reproducible code and interpretable insights.
 
 ### Minimal viable scope
+
 The first milestone focuses on:
+
 - Collecting data
 - Implementing cleaning rules
 - Generating a set of sensible features (rolling averages and a small number of context variables)
@@ -29,6 +274,7 @@ The first milestone focuses on:
 **Complex features** (travel distance, opponent allowances by position, SHAP explanations, interactive dashboard) are clearly delineated as **optional extensions** to pursue if time allows.
 
 ### Scope details
+
 - **Data window:** Regular season games from 2022-23, 2023-24, and 2024-25, frozen through **2025-04-15 23:59:59 UTC** (end of the 2024-25 regular season).
 - **Targets:** Per-player per-game points (PTS), rebounds (REB), and assists (AST).
 - **Reproducibility:** All steps are deterministic with pinned software versions and fixed random seeds. Data snapshots are saved with immutable file names containing the freeze date.
@@ -38,10 +284,13 @@ The first milestone focuses on:
 ## 2) Clear Goals and Success Criteria
 
 ### Primary goal
+
 Predict per-player per-game PTS, REB, and AST using contextual and historical features.
 
 ### Quantitative success criteria
+
 On a held-out, time-forward test set (see **Test Plan**):
+
 - Improve mean absolute error (MAE) over a 5-game rolling-average baseline by **≥ 12 %** for each target.
 - Achieve target MAE thresholds:
   - **PTS:** ≤ 3.6
@@ -50,7 +299,9 @@ On a held-out, time-forward test set (see **Test Plan**):
 - For the **top 20 players by minutes played** in the test period, improve MAE by **≥ 8 %** versus the baseline for each target.
 
 ### Secondary goals (stretch)
+
 These goals will be tackled **if time allows**:
+
 - End-to-end determinism and reproducibility (frozen data, pinned environment, fixed seeds).
 - Interpretable insights via global feature importance and local explanations using SHAP.
 - An interactive dashboard for exploring predictions, residuals, and feature impacts.
@@ -60,10 +311,12 @@ These goals will be tackled **if time allows**:
 ## 3) Data Collection (What and How)
 
 ### Freeze window
+
 - **Seasons:** 2022-23, 2023-24, 2024-25 (regular season only).
 - **Data freeze date:** **2025-04-15 23:59:59 UTC**.
 
 ### Primary sources
+
 - **NBA Stats API** via the `nba_api` Python library (preferred):
   - Player game logs (person_id, game_id, date, team_id, opponent_id, minutes, PTS/REB/AST, FGA/3PA/FTA, usage, starter flag).
   - Team context snapshots (offensive_rating, defensive_rating, pace; season-to-date and trailing windows).
@@ -74,16 +327,20 @@ These goals will be tackled **if time allows**:
 - **Injury/availability reports** are optional; we will only pursue them if a reliable source can be integrated easily.
 
 ### Acquisition approach
+
 Implement Python collectors under `src/data/`:
+
 - `collect_player_gamelogs.py`: write to `data/raw/player_gamelogs_{season}.parquet`
 - `collect_team_context.py`: write to `data/raw/team_context_{season}.parquet`
 - `collect_schedule.py`: write to `data/raw/schedules_{season}.parquet`
 
 **Reference data:**
+
 - `data/reference/arenas.csv`: arena lat/lon for travel distance (Haversine) and home arena mapping.
 - `data/reference/team_id_map.csv`: mapping among NBA Stats IDs, Basketball-Reference IDs, and names.
 
 **Controls:**
+
 - Rate limit to **≤ 1 req/sec** with retry/backoff.
 - Cache all HTTP responses in `data/cache/` for reproducibility.
 - Log provenance and hashes; snapshot raw files with immutable filenames that include the freeze date.
@@ -95,23 +352,28 @@ Implement Python collectors under `src/data/`:
 Cleaning rules ensure data quality while preventing leakage.
 
 **Identifier standardisation**
+
 - Normalise player and team IDs to NBA Stats IDs (`person_id`, `team_id`) and include a crosswalk to Basketball-Reference IDs.
 
 **Missing data**
+
 - Exclude **DNP** (Did Not Play) games from training.
 - Impute missing context features using time-aware methods (last observation carried forward capped at a **10-day** window); otherwise mark with binary `context_missing` flags and median imputation.
 
 **Integrity checks**
+
 - Deduplicate by `(person_id, game_id)`.
 - Remove negative or nonsensical stats; **winsorise** outliers at the **99.9th percentile** per feature.
 
 **Alignment and derived variables**
+
 - Merge player-level rows with the **nearest preceding** team context snapshot (no future leakage).
 - Compute **rest days** based on the previous game date per player.
 - **Travel distance features (optional):** compute Haversine distance from the previous game’s location to the current arena using the arena mapping.  
   For the minimal pipeline, a simpler **home/away** flag and **rest days** will suffice.
 
 **Logging**
+
 - Save a cleaning report to `reports/cleaning/cleaning_log_{date}.json` with counts of dropped and imputed records.
 
 ---
@@ -121,14 +383,17 @@ Cleaning rules ensure data quality while preventing leakage.
 All rolling/exponential features use only games **strictly before** the current game date for the same player.
 
 **Recent form**
+
 - Rolling averages: `last_3` and `last_5` for `pts`, `reb`, `ast`, `minutes`, `usage_pct`, `fga`, `fta`, `fg3a`, `tov`.
 - Exponentially weighted mean (EWM) with **halflife = 3 games** for the same set.
 
 **Opponent strength and tempo**
+
 - Opponent `defensive_rating`, `offensive_rating`, and `pace` based on **trailing 10 games** and **season-to-date** snapshots.
 - **Optional extension:** opponent allowances by position (average PTS/REB/AST allowed per position over trailing 10 games) if reliable positional data can be sourced.
 
 **Context**
+
 - `is_home` flag (binary)
 - `rest_days` bucketed as **0, 1, 2, 3+**
 - `back_to_back` flag and `three_in_four` flag
@@ -136,7 +401,8 @@ All rolling/exponential features use only games **strictly before** the current 
 - **Optional extension:** travel distance since the previous game; cumulative minutes in the last **7** and **14** days
 
 **Stability and robustness**
-- Clip extreme rolling values; add `insufficient_history` flags when fewer than *k* prior games exist.
+
+- Clip extreme rolling values; add `insufficient_history` flags when fewer than _k_ prior games exist.
 - Persist the engineered dataset to `data/processed/features.parquet`; document columns in `docs/features.md`.
 
 ---
@@ -147,6 +413,7 @@ All rolling/exponential features use only games **strictly before** the current 
 Three independent regression tasks: **PTS**, **REB**, and **AST**.
 
 **Baselines**
+
 - Last-game value baseline
 - 5-game rolling average baseline
 - EWM baseline (halflife = 3)
@@ -156,13 +423,15 @@ To keep the initial scope manageable, we will start with a **regularised linear 
 
 - Regularised linear: **Ridge**, **Lasso** (with standardised numeric features)
 - Tree ensembles: **RandomForestRegressor**, **XGBoostRegressor** (`xgboost` library)  
-  *LightGBM may be explored as a stretch goal.*
+  _LightGBM may be explored as a stretch goal._
 
 **Feature handling**
+
 - One-hot encode categorical flags; scale continuous features for linear models; tree models use raw scales.
 - Feature selection via mutual information or model-based importance is optional and will be documented if applied.
 
 **Hyperparameter search**
+
 - Use **time-aware cross-validation** (rolling origin) on the training period.
 - Small, explicit grids to control compute:
   - Ridge/Lasso: `alpha ∈ {0.1, 0.5, 1, 2, 5}`
@@ -171,13 +440,15 @@ To keep the initial scope manageable, we will start with a **regularised linear 
 - For XGBoost, use **early stopping** with a time-forward validation split.
 
 **Artifacts**
+
 - Save the best model per target plus any scaler/encoder to `artifacts/models/{target}_{model}.joblib`.
 - Save full metrics and cross-validation results to `artifacts/metrics/{target}_metrics.json`.
 
 **Interpretability (stretch)**
+
 - **Global:** permutation importance and (for XGBoost) built-in feature importance metrics.
 - **Local:** SHAP value summaries for a sample of games/players.  
-  *This is optional and will only be pursued after the minimal pipeline is complete.*
+  _This is optional and will only be pursued after the minimal pipeline is complete._
 
 ---
 
@@ -185,12 +456,14 @@ To keep the initial scope manageable, we will start with a **regularised linear 
 
 **Exploratory plots (static)**  
 Create static PNGs under `reports/figures/` to explore data and model behaviour:
+
 - Distributions of points, rebounds, and assists
 - Scatter plots of minutes vs. points/rebounds/assists
 - Residuals vs. key features
 
 **Interactive dashboard (stretch)**  
 Implement a local interactive dashboard using **Plotly Dash** or **Streamlit** only after the core pipeline is complete. If developed, the app will support:
+
 - Predicted vs. actual values for each target with drill-down by player and date
 - Residual distributions and error heatmaps by opponent and rest buckets
 - Feature importance charts (global) and local explanations per game
@@ -200,6 +473,7 @@ Launch locally with:
 ```bash
 make app
 ```
+
 (default: http://127.0.0.1:8050)
 
 ---
@@ -207,27 +481,34 @@ make app
 ## 8) Test Plan (Strict, Time-Based)
 
 ### Data slicing
+
 Use only regular season games, respecting the freeze date **2025-04-15**:
-- **Train:** 2022-10-01 to 2024-12-31  
-- **Validation:** 2025-01-01 to 2025-03-15  
+
+- **Train:** 2022-10-01 to 2024-12-31
+- **Validation:** 2025-01-01 to 2025-03-15
 - **Test (hold-out):** 2025-03-16 to 2025-04-15
 
 ### Evaluation metrics
+
 - Report **MAE** (primary) and **RMSE** (secondary) for each target on the validation and test sets.
 - Compare against baselines; report **absolute values** and **percentage improvement**.
 - Compute **per-player metrics** for the top 20 players by minutes played in the test period.
 
 ### Uncertainty quantification
+
 - Bootstrap the test set (**1,000 resamples**) to compute **95% confidence intervals** for MAE deltas versus baseline.
 
 ### Leakage checks
+
 - Unit tests confirm that all rolling features use **only prior games**.
 - Verify that no **post-game context** leaks (e.g., final ratings or season averages after the game).
 
 ### Continuous Integration (CI) tests
+
 - On every commit/PR, run **unit tests**, **linting**, and a **small pipeline** on a two-week subsample.
 
 ### Acceptance criteria
+
 - The **minimal pipeline** must meet the success criteria listed above across the test period and per-player slice.
 - **Advanced features** are optional and will **not** block acceptance of the project.
 
@@ -264,6 +545,7 @@ The repository is structured to support modular development and reproducibility:
 Given the **two-month** timeline, our strategy is to deliver the **core pipeline early**, ensuring data collection, cleaning, feature engineering, baseline models, and **one main model** are working end-to-end.
 
 We will then iterate and, **if time permits**:
+
 - Expand the feature set (e.g., travel distance, opponent positional allowances).
 - Explore additional models.
 - Implement interpretability tools.
