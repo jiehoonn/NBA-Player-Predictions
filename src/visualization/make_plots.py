@@ -471,7 +471,6 @@ def main():
 
     # Generate plots for each model
     for model_path in model_files:
-
         if "importance" in plots_to_generate:
             plot_feature_importance(model_path, output_dir)
 
