@@ -51,9 +51,9 @@ artifacts/metrics/*.json
 artifacts/shap/*.pkl
 
 # Reports (can be regenerated)
-reports/figures/*.png
-reports/figures/*.pdf
-reports/cleaning/*.json
+# reports/figures/*.png
+# reports/figures/*.pdf
+# reports/cleaning/*.json
 
 # Testing
 .pytest_cache/
