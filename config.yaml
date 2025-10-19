@@ -1,0 +1,155 @@
+# NBA Player Performance Prediction - Configuration File
+# Based on Notebook 09 findings and production pipeline requirements
+
+# Data Collection Parameters
+data_collection:
+  seasons:
+    - "2022-23"
+    - "2023-24"
+    - "2024-25"
+  top_players: 120  # Top N players by minutes played
+  reference_season: "2023-24"  # Season to use for player selection
+  rate_limit_delay: 0.6  # Seconds between API calls
+  retry_delay: 2.0  # Seconds to wait after failed request
+
+# Feature Engineering Parameters
+features:
+  rolling_windows:
+    - 3
+    - 5
+
+  # Feature groups
+  original_features:
+    - pts_last_3
+    - pts_last_5
+    - reb_last_3
+    - reb_last_5
+    - ast_last_3
+    - ast_last_5
+    - min_last_3
+    - min_last_5
+    - games_played
+
+  usage_features:
+    - fga_last_3
+    - fga_last_5
+    - fta_last_3
+    - fta_last_5
+    - fg3a_last_3
+    - fg3a_last_5
+    - fg_pct_last_3
+    - fg_pct_last_5
+
+  contextual_features:
+    - IS_HOME
+    - REST_DAYS
+    - IS_BACK_TO_BACK
+    - OPP_DEF_RATING
+    - OPP_OFF_RATING
+    - OPP_PACE
+
+  # Data cleaning
+  min_games_played: 5  # Minimum games before using player data
+
+  # Train/Val/Test splits (time-based)
+  train_end_date: "2024-07-31"  # End of 2023-24 season
+  val_end_date: "2024-12-31"     # Mid 2024-25 season
+
+# Model Training Parameters
+models:
+  targets:
+    - PTS
+    - REB
+    - AST
+
+  # Model hyperparameters (from Notebook 09)
+  lasso:
+    alpha: 0.1
+    max_iter: 2000
+    random_state: 42
+
+  xgboost:
+    n_estimators: 100
+    max_depth: 3
+    learning_rate: 0.05
+    random_state: 42
+    n_jobs: -1
+    verbosity: 0
+
+  # Feature set to use
+  use_all_features: true  # If false, use only original 9 features
+
+# Evaluation Parameters
+evaluation:
+  metrics:
+    - mae   # Mean Absolute Error (primary)
+    - rmse  # Root Mean Squared Error
+    - r2    # R-squared
+
+  baseline: "5_game_rolling"  # Baseline for comparison
+
+  # Project goals (MAE targets from proposal)
+  goals:
+    PTS: 3.6
+    REB: 2.2
+    AST: 2.0
+
+# Visualization Parameters
+visualization:
+  figure_dpi: 300
+  figure_format: png
+
+  plots:
+    - performance        # Performance comparison across targets
+    - importance         # Feature importance (XGBoost only)
+    - predictions        # Predictions vs actual scatter
+    - errors             # Error distribution histogram
+    - timeseries         # Time series sample predictions
+
+  timeseries:
+    n_games: 50         # Number of games to show in time series
+
+  feature_importance:
+    top_n: 15           # Show top N features
+
+# File Paths
+paths:
+  # Data directories
+  data_raw: data/raw
+  data_interim: data/interim
+  data_processed: data/processed
+
+  # Output directories
+  models: artifacts/models
+  metrics: artifacts/metrics
+  reports: reports
+  figures: reports/figures
+
+  # Specific files
+  raw_data_file: player_gamelogs_enhanced_2022-2025.parquet
+  processed_features_file: features_enhanced_3seasons.parquet
+  evaluation_report: evaluation_report.md
+
+# Testing Parameters
+testing:
+  sample_data_file: data/raw/player_gamelogs_2023-24_sample.parquet
+  test_output_dir: artifacts/models_test
+  quick_test_seasons:
+    - "2023-24"
+  quick_test_players: 20
+
+# Notebook 09 Best Results (for reference)
+# These are the benchmark results from research phase
+benchmark:
+  PTS:
+    model: Lasso
+    mae: 5.774
+    improvement_pct: 3.9
+  REB:
+    model: XGBoost
+    mae: 2.185
+    improvement_pct: 1.7
+  AST:
+    model: XGBoost
+    mae: 1.762
+    improvement_pct: 2.6

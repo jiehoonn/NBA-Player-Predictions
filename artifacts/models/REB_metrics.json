@@ -1,0 +1,10 @@
+{
+  "target": "REB",
+  "model_name": "XGBoost",
+  "num_features": 23,
+  "train_mae": 2.0933417797872744,
+  "val_mae": 2.103429685655437,
+  "test_mae": 2.185411351898785,
+  "baseline_mae": 2.2238996579247434,
+  "improvement_pct": 1.7306673837017548
+}
