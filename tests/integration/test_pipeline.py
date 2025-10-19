@@ -12,9 +12,19 @@ from pathlib import Path
 
 
 def test_sample_data_exists():
-    """Test that sample data file exists for quick testing."""
+    """Test that sample data file exists for quick testing (if available locally)."""
     sample_file = Path("data/raw/player_gamelogs_2023-24_sample.parquet")
-    assert sample_file.exists(), f"Sample data not found at {sample_file}"
+
+    # Skip test if sample file doesn't exist (e.g., on CI)
+    if not sample_file.exists():
+        pytest.skip(
+            f"Sample data not found at {sample_file} - skipping (expected on CI)"
+        )
+
+    # If we get here, file exists - verify it's readable
+    assert sample_file.exists()
+    df = pd.read_parquet(sample_file)
+    assert len(df) > 0, "Sample data file is empty"
 
 
 def test_feature_engineering_pipeline():
