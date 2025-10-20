@@ -1,0 +1,10 @@
+{
+  "target": "PTS",
+  "model_name": "Lasso",
+  "num_features": 23,
+  "train_mae": 5.3844289499391245,
+  "val_mae": 5.440183814283773,
+  "test_mae": 5.453694669968485,
+  "baseline_mae": 5.654583802024747,
+  "improvement_pct": 3.552677599089243
+}

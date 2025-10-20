@@ -1,0 +1,10 @@
+{
+  "target": "AST",
+  "model_name": "XGBoost",
+  "num_features": 23,
+  "train_mae": 1.5869527115910043,
+  "val_mae": 1.62827026506265,
+  "test_mae": 1.646843649170396,
+  "baseline_mae": 1.6792744656917886,
+  "improvement_pct": 1.9312397814631561
+}

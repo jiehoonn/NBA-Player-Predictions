@@ -4,10 +4,12 @@
 # Data Collection Parameters
 data_collection:
   seasons:
+    - "2020-21"
+    - "2021-22"
     - "2022-23"
     - "2023-24"
     - "2024-25"
-  top_players: 120  # Top N players by minutes played
+  top_players: 200  # Top N players by minutes played (extended for experiment)
   reference_season: "2023-24"  # Season to use for player selection
   rate_limit_delay: 0.6  # Seconds between API calls
   retry_delay: 2.0  # Seconds to wait after failed request
@@ -126,8 +128,8 @@ paths:
   figures: reports/figures
 
   # Specific files
-  raw_data_file: player_gamelogs_enhanced_2022-2025.parquet
-  processed_features_file: features_enhanced_3seasons.parquet
+  raw_data_file: player_gamelogs_enhanced_2020-2025.parquet
+  processed_features_file: features_enhanced_5seasons.parquet
   evaluation_report: evaluation_report.md
 
 # Testing Parameters
