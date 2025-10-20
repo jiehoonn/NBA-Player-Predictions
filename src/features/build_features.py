@@ -2,8 +2,10 @@
 """
 Feature Engineering Script - Create leakage-safe rolling features
 
-Based on notebook 08 findings:
-- 23 total features: 9 rolling + 8 usage + 6 contextual
+Features (PHASE 1 ENHANCED):
+- Original: 23 features (9 rolling + 8 usage + 6 contextual)
+- Phase 1 Advanced: +21 features (TS%, trends, last game, TOV, +/-, consistency)
+- Total: 44 features
 - Leakage-safe: .shift(1).rolling() pattern
 - Time-based train/val/test splits
 
@@ -64,6 +66,68 @@ def add_rolling_features(df, windows=[3, 5]):
             player_df[f"fg_pct_last_{window}"] = fg_pct_rolling.fillna(
                 player_df["FG_PCT"].mean()
             )
+
+        # ===== PHASE 1 ADVANCED FEATURES =====
+
+        # 1. True Shooting % (better than FG%)
+        # TS% = PTS / (2 * (FGA + 0.44 * FTA))
+        ts_pct = player_df["PTS"] / (2 * (player_df["FGA"] + 0.44 * player_df["FTA"] + 0.001))
+        for window in windows:
+            player_df[f"ts_pct_last_{window}"] = (
+                ts_pct.shift(1).rolling(window, min_periods=1).mean()
+            )
+
+        # 2. Last game performance (hot/cold streaks)
+        player_df["pts_last_game"] = player_df["PTS"].shift(1)
+        player_df["reb_last_game"] = player_df["REB"].shift(1)
+        player_df["ast_last_game"] = player_df["AST"].shift(1)
+
+        # 3. Turnover rate (usage indicator)
+        for window in windows:
+            player_df[f"tov_last_{window}"] = (
+                player_df["TOV"].shift(1).rolling(window, min_periods=1).mean()
+            )
+
+        # 4. Plus/Minus (overall impact)
+        for window in windows:
+            player_df[f"plus_minus_last_{window}"] = (
+                player_df["PLUS_MINUS"].shift(1).rolling(window, min_periods=1).mean()
+            )
+
+        # 5. Performance trend (is player improving or declining?)
+        # Linear regression slope of last 5 games
+        def calculate_trend(series):
+            """Calculate linear trend (slope) over a window."""
+            if len(series) < 2 or series.isna().all():
+                return 0
+            x = np.arange(len(series))
+            y = series.values
+            valid = ~np.isnan(y)
+            if valid.sum() < 2:
+                return 0
+            slope = np.polyfit(x[valid], y[valid], 1)[0]
+            return slope
+
+        player_df["pts_trend_last_5"] = (
+            player_df["PTS"].shift(1).rolling(5, min_periods=2).apply(calculate_trend, raw=False)
+        )
+        player_df["reb_trend_last_5"] = (
+            player_df["REB"].shift(1).rolling(5, min_periods=2).apply(calculate_trend, raw=False)
+        )
+        player_df["ast_trend_last_5"] = (
+            player_df["AST"].shift(1).rolling(5, min_periods=2).apply(calculate_trend, raw=False)
+        )
+
+        # 6. Scoring consistency (std dev - lower is more predictable)
+        player_df["pts_std_last_5"] = (
+            player_df["PTS"].shift(1).rolling(5, min_periods=2).std()
+        )
+        player_df["reb_std_last_5"] = (
+            player_df["REB"].shift(1).rolling(5, min_periods=2).std()
+        )
+        player_df["ast_std_last_5"] = (
+            player_df["AST"].shift(1).rolling(5, min_periods=2).std()
+        )
 
         # Games played counter
         player_df["games_played"] = range(len(player_df))
