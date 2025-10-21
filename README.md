@@ -9,19 +9,27 @@
 
 ## 📊 MIDTERM REPORT - OCTOBER 2025
 
+---
+
+### 🎥 Presentation Video
+
+_[Video will be added here after recording]_
+
+---
+
 ### 🎯 Project Status: **Production Pipeline Complete**
 
 We have successfully built, tested, and deployed an end-to-end machine learning pipeline that predicts NBA player performance (PTS, REB, AST) with **measurable improvements over baseline methods**.
 
 ### 🏆 Key Achievements
 
-- ✅ **Data Collection Pipeline**: Successfully collected 3 seasons (2022-25) of NBA data covering 120 top players (~24,000 games)
-- ✅ **Leakage-Safe Feature Engineering**: Implemented 23 features using strict temporal ordering (`.shift(1).rolling()` pattern)
+- ✅ **Data Collection Pipeline**: Successfully collected 5 seasons (2020-25) of NBA data covering 200 top players (~40,000+ games)
+- ✅ **Advanced Feature Engineering**: Implemented **38 total leakage-safe features** (23 baseline + 15 Phase 1 advanced) using strict temporal ordering
 - ✅ **Model Selection & Training**: Identified best models through systematic comparison (Lasso for PTS, XGBoost for REB/AST)
-- ✅ **Achieved 2/3 Performance Goals**:
-  - **REB: MAE 2.19 < 2.2 goal** ✅
-  - **AST: MAE 1.76 < 2.0 goal** ✅
-  - **PTS: MAE 5.77 (working toward 3.6 goal)** 🚧
+- ✅ **Strong Performance Results**:
+  - **REB: MAE 2.134 < 2.2 goal (+2.4% improvement)** ✅ **Achieved**
+  - **AST: MAE 1.642 < 2.0 goal (+2.2% improvement)** ✅ **Achieved**
+  - **PTS: MAE 5.448 (+3.7% improvement, working toward 3.6 goal)** 🚧 In Progress
 - ✅ **Comprehensive Testing**: 16 unit + 8 integration tests validating mathematical correctness and leakage prevention
 - ✅ **CI/CD Pipeline**: Automated testing, linting, and formatting on Python 3.10, 3.11, 3.12
 - ✅ **Documentation**: Complete test strategy, evaluation reports, and 31 visualization plots
@@ -32,9 +40,9 @@ We have successfully built, tested, and deployed an end-to-end machine learning 
 
 | Target  | Model   | Test MAE  | Baseline MAE | Improvement | Goal | Status          |
 | ------- | ------- | --------- | ------------ | ----------- | ---- | --------------- |
-| **PTS** | Lasso   | **5.774** | 6.008        | **+3.9%**   | 3.6  | 🚧 In Progress  |
-| **REB** | XGBoost | **2.185** | 2.224        | **+1.7%**   | 2.2  | ✅ **Achieved** |
-| **AST** | XGBoost | **1.762** | 1.809        | **+2.6%**   | 2.0  | ✅ **Achieved** |
+| **PTS** | Lasso   | **5.448** | 5.655        | **+3.7%**   | 3.6  | 🚧 In Progress  |
+| **REB** | XGBoost | **2.134** | 2.186        | **+2.4%**   | 2.2  | ✅ **Achieved** |
+| **AST** | XGBoost | **1.642** | 1.679        | **+2.2%**   | 2.0  | ✅ **Achieved** |
 
 **Baseline:** 5-game rolling average (simple persistence model)
 
@@ -61,11 +69,12 @@ Our development followed a rigorous **research-to-production** workflow document
 
 #### Phase 3: Enhanced Data Collection (Notebook 07)
 
-- **Scale Jump**: 1 season to **3 seasons**, 44 players to **120 players**
+- **Scale Jump**: 1 season to **5 seasons** (2020-25), 44 players to **200 players**
 - **Critical Bug Discovery**: Merging on `Game_ID` alone caused **Cartesian product duplication** (171K rows instead of 24K)
 - **Fix**: Merge on `['PLAYER_ID', 'Game_ID']` - prevented data contamination
 - **New Features**: Added opponent stats, rest days, home/away context
-- **Impact**: Baseline improved ~7% due to scale
+- **Impact**: Baseline improved ~7% due to scale (PTS: -5.5%, REB: -2.3%, AST: -6.5%), further improvements with more data
+  - _See detailed methodology in_ `results/data_scale_comparison.md`
 
 #### Phase 4: Feature Engineering (Notebook 08)
 
@@ -73,7 +82,8 @@ Our development followed a rigorous **research-to-production** workflow document
   - Rolling averages (3/5 games) for stats: PTS, REB, AST, MIN
   - Usage features: FGA, FTA, FG3A, FG_PCT
   - Contextual features: IS_HOME, REST_DAYS, opponent ratings, pace
-- **Total: 23 features** (9 original + 8 usage + 6 contextual)
+- **Total: 23 baseline features** (9 original + 8 usage + 6 contextual)
+  - _Note: Phase 1 advanced features (15 additional) are documented separately_
 - **Critical Pattern**: `df['PTS'].shift(1).rolling(3).mean()` - shift(1) prevents current game leakage
 - **Validation**: Unit tests verify leakage prevention with known values
 
@@ -104,63 +114,45 @@ Our development followed a rigorous **research-to-production** workflow document
 
 #### 1. Model Performance Comparison
 
-![Model Performance](reports/figures/model_performance_comparison.png)
-_Our models (blue) vs baseline 5-game rolling average (orange) across all three targets. Error bars show standard deviation._
+![Model Performance](reports/figures/midterm_performance_comparison.png)
+_Our models (green) vs baseline 5-game rolling average (orange) across all three targets. Shows MAE values and improvement percentages._
 
 #### 2. Predictions vs Actual (Points)
 
-![PTS Predictions](reports/figures/predictions_vs_actual_PTS.png)
-_Scatter plot showing predicted vs actual points. Perfect predictions would lie on the diagonal line. R² = 0.377 indicates moderate predictive power._
+![PTS Predictions](reports/figures/midterm_predictions_vs_actual_PTS.png)
+_Scatter plot showing predicted vs actual points for test set (7,112 games). Perfect predictions would lie on the diagonal red line._
 
 #### 3. Predictions vs Actual (Rebounds)
 
-![REB Predictions](reports/figures/predictions_vs_actual_REB.png)
-_Rebounds prediction with R² = 0.421. Lower variance makes REB easier to predict than PTS._
+![REB Predictions](reports/figures/midterm_predictions_vs_actual_REB.png)
+_Rebounds predictions with lower variance - easier to predict than PTS with our 38-feature XGBoost model._
 
 #### 4. Predictions vs Actual (Assists)
 
-![AST Predictions](reports/figures/predictions_vs_actual_AST.png)
-_Assists prediction with R² = 0.436 - our best performing model._
+![AST Predictions](reports/figures/midterm_predictions_vs_actual_AST.png)
+_Assists predictions - our best performing model with lowest MAE and highest R² score._
 
-#### 5. Feature Importance (Rebounds - XGBoost)
+#### 5. Feature Importance (REB & AST - XGBoost)
 
-![Feature Importance REB](reports/figures/feature_importance_REB.png)
-_Top features: reb_last_5 and reb_last_3 dominate, but opponent defensive rating and contextual features contribute._
+![Feature Importance Combined](reports/figures/midterm_feature_importance_combined.png)
+_Top 15 features for rebounds and assists. Color-coded: green = rolling averages, orange = contextual features, blue = advanced metrics. Rolling averages dominate, but contextual features add value._
 
-#### 6. Feature Importance (Assists - XGBoost)
+#### 6. Error Distribution Analysis
 
-![Feature Importance AST](reports/figures/feature_importance_AST.png)
-_Top features: ast_last_5 and ast_last_3 are most important, with usage stats (FGA, minutes) adding value._
+##### Points (PTS)
 
-#### 7. Error Distribution (Points)
+![Error Distribution PTS](reports/figures/midterm_error_distribution_PTS.png)
+_Left: Histogram of residuals (approximately normal, centered near zero). Right: Residuals vs predictions (no systematic bias)._
 
-![Error Distribution PTS](reports/figures/error_distribution_PTS.png)
-_Residual distribution shows slight positive skew - model tends to underpredict high-scoring games._
+##### Rebounds (REB)
 
-#### 8. Time Series Predictions (Points)
+![Error Distribution REB](reports/figures/midterm_error_distribution_REB.png)
+_REB errors show tight distribution with low variance - consistent predictions across all rebound values._
 
-![Time Series PTS](reports/figures/time_series_PTS.png)
-_Sample player's points over time. Blue = actual, orange = predicted. Model tracks trends well but struggles with outliers._
+##### Assists (AST)
 
-#### 9. Time Series Predictions (Rebounds)
-
-![Time Series REB](reports/figures/time_series_REB.png)
-_Rebounds over time - smoother pattern, easier to predict._
-
-#### 10. Time Series Predictions (Assists)
-
-![Time Series AST](reports/figures/time_series_AST.png)
-_Assists over time - our most accurate predictions._
-
-#### 11. Enhanced Features Visualization
-
-![Enhanced Features](reports/figures/enhanced_features_visualization.png)
-_Comparison of original 9 features vs full 23-feature set impact on model performance._
-
-#### 12. Enhanced vs Original Feature Sets
-
-![Enhanced vs Original](reports/figures/enhanced_vs_original_comparison.png)
-_Direct comparison showing 1-3% improvement from adding usage and contextual features._
+![Error Distribution AST](reports/figures/midterm_error_distribution_AST.png)
+_AST errors are well-distributed with minimal bias - our most accurate model overall._
 
 ---
 
@@ -254,11 +246,11 @@ pip install -r requirements.txt
 make all
 
 # Or step-by-step:
-make data          # Collect 3 seasons, 120 players (~10 min)
-make features      # Engineer 23 features (~1 min)
-make models        # Train Lasso + 2x XGBoost (~3 min)
+make data          # Collect 5 seasons, 200 players (~15-20 min)
+make features      # Engineer 38 features (~1-2 min)
+make models        # Train Lasso + 2x XGBoost (~3-5 min)
 make evaluate-full # Generate evaluation report
-make visualize     # Create 31 plots (~1 min)
+make visualize     # Create 31+ plots (~1-2 min)
 
 # 3. Run tests
 pytest tests/unit/ -v --cov=src
@@ -267,11 +259,11 @@ pytest tests/integration/ -v
 
 **Output:**
 
-- `data/raw/player_gamelogs_enhanced_2022-2025.parquet` - Raw data (23,925 games)
-- `data/processed/features_enhanced_3seasons.parquet` - Engineered features (23,325 games after cleaning)
+- `data/raw/player_gamelogs_enhanced_2020-2025.parquet` - Raw data (~40,000+ games)
+- `data/processed/features_enhanced_5seasons.parquet` - Engineered features (~38,000+ games after cleaning)
 - `artifacts/models/*.joblib` - Trained models
 - `reports/evaluation_report.md` - Performance metrics
-- `reports/figures/*.png` - 31 visualizations
+- `reports/figures/*.png` - 31+ visualizations
 
 ---
 
@@ -283,7 +275,7 @@ NBA-Player-Predictions/
 │   ├── data/
 │   │   └── collect_data.py       # NBA API data collection
 │   ├── features/
-│   │   └── build_features.py     # 23 leakage-safe features
+│   │   └── build_features.py     # 38 leakage-safe features
 │   ├── models/
 │   │   ├── train_models.py       # Best models from Notebook 09
 │   │   └── evaluate_models.py    # Comprehensive evaluation
@@ -297,8 +289,8 @@ NBA-Player-Predictions/
 │       └── test_pipeline.py
 ├── notebooks/                    # Research journey (01-09)
 │   ├── 06_comprehensive_ml_exploration.ipynb  # 1 season attempt
-│   ├── 07_enhanced_data_collection.ipynb      # 3 seasons + bug fix
-│   ├── 08_enhanced_feature_engineering.ipynb  # 23 features
+│   ├── 07_enhanced_data_collection.ipynb      # 5 seasons + bug fix
+│   ├── 08_enhanced_feature_engineering.ipynb  # 38 features
 │   └── 09_enhanced_ml_exploration.ipynb       # ⭐ Best model selection
 ├── reports/
 │   ├── figures/                  # 31 visualization plots
@@ -335,12 +327,12 @@ Our current PTS model (MAE 5.77) is **60% of the way to our goal** (3.6). To bri
 
 ### 🎓 Key Learnings
 
-1. **Scale matters**: 3 seasons vs 1 season → **~7% baseline improvement**
+1. **Scale matters**: 5 seasons vs 1 season → **significant baseline improvement**, more data = better generalization
 2. **Leakage prevention is critical**: `.shift(1)` before `.rolling()` prevents contamination
 3. **Data quality > Data quantity**: Fixing the merge bug was more impactful than adding features
-4. **Simpler models often win**: With 23 features, Lasso/XGBoost outperform neural nets
+4. **Simpler models often win**: With 38 features, Lasso/XGBoost outperform neural nets
 5. **Test what matters**: Validate mathematical correctness, not just code structure
-6. **Contextual features help**: Opponent stats, rest days add 1-3% improvement
+6. **Advanced features add value**: 15 Phase 1 features (efficiency, trends, consistency) provide incremental gains
 7. **Tree models excel at non-linear**: REB/AST have complex patterns → XGBoost wins
 
 ---
@@ -349,12 +341,6 @@ Our current PTS model (MAE 5.77) is **60% of the way to our goal** (3.6). To bri
 
 - **[reports/evaluation_report.md](reports/evaluation_report.md)**: Detailed performance metrics
 - **Notebooks 06-09**: Research journey and model selection process
-
----
-
-### 🎥 Presentation Video
-
-_[Video will be added here after recording]_
 
 ---
 

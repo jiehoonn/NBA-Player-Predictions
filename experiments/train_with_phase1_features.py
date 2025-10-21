@@ -11,11 +11,13 @@ Expected improvement: -0.28 points in PTS MAE (5.454 → 5.17)
 
 import pandas as pd
 import numpy as np
+from pathlib import Path
+import subprocess
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
-import json
+import sys
 
 # Baseline 23 features (from previous experiments)
 ORIGINAL_FEATURES = [
@@ -60,8 +62,82 @@ PHASE1_FEATURES = [
 ENHANCED_FEATURES = BASELINE_FEATURES + PHASE1_FEATURES
 
 
+def get_git_commit():
+    """
+    Get current git commit hash for reproducibility tracking.
+
+    Returns:
+        str: Git commit hash (40-character SHA-1) or None if not in git repo
+    """
+    try:
+        git_commit = subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+        return git_commit
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Not in a git repo or git not installed
+        return None
+
+
 def train_and_evaluate(train_df, val_df, test_df, target, features, model_type='auto'):
-    """Train model and return performance metrics."""
+    """
+    Train and evaluate a machine learning model for NBA player performance prediction.
+
+    Parameters
+    ----------
+    train_df : pandas.DataFrame
+        Training data with features and target columns
+    val_df : pandas.DataFrame
+        Validation data with features and target columns
+    test_df : pandas.DataFrame
+        Test data with features and target columns
+    target : str
+        Target variable name. One of: 'PTS', 'REB', 'AST'
+    features : list of str
+        List of feature column names to use for training
+    model_type : str, default='auto'
+        Model selection strategy. Options:
+        - 'auto': Selects Lasso for PTS, XGBoost for REB/AST (default)
+        - 'lasso': Forces Lasso regression (uses StandardScaler)
+        - 'xgboost': Forces XGBoost regressor (no scaling)
+
+    Returns
+    -------
+    results : dict
+        Performance metrics dictionary containing:
+        - train_mae, val_mae, test_mae: Mean Absolute Error on each split
+        - train_rmse, val_rmse, test_rmse: Root Mean Squared Error
+        - train_r2, val_r2, test_r2: R² score
+        - baseline_mae: MAE of 5-game rolling average baseline
+        - improvement_pct: Percentage improvement over baseline
+    model : sklearn estimator or XGBRegressor
+        Trained model object (either Lasso or XGBoost)
+    model_name : str
+        Name of the model used ('Lasso' or 'XGBoost')
+
+    Behavior
+    --------
+    - For PTS target: Uses Lasso with StandardScaler preprocessing
+    - For REB/AST targets: Uses XGBoost without scaling
+    - Validates all features and target exist in input DataFrames
+    - Computes baseline using '{target.lower()}_last_5' column
+    - Raises KeyError if features or target are missing
+    """
+
+    # Validate features and target exist in all DataFrames
+    for df_name, df in [("train", train_df), ("val", val_df), ("test", test_df)]:
+        missing_features = [f for f in features if f not in df.columns]
+        if missing_features:
+            raise KeyError(
+                f"Missing features in {df_name} DataFrame: {missing_features}\n"
+                f"Available columns: {list(df.columns)}"
+            )
+        if target not in df.columns:
+            raise KeyError(
+                f"Missing target '{target}' in {df_name} DataFrame\n"
+                f"Available columns: {list(df.columns)}"
+            )
 
     # Prepare data
     X_train = train_df[features]
@@ -84,6 +160,22 @@ def train_and_evaluate(train_df, val_df, test_df, target, features, model_type='
             )
             model_name = 'XGBoost'
             use_scaling = False
+    elif model_type == 'lasso':
+        model = Lasso(alpha=0.1, random_state=42, max_iter=2000)
+        model_name = 'Lasso'
+        use_scaling = True
+    elif model_type == 'xgboost':
+        model = XGBRegressor(
+            n_estimators=100, max_depth=3, learning_rate=0.05,
+            random_state=42, n_jobs=-1, verbosity=0
+        )
+        model_name = 'XGBoost'
+        use_scaling = False
+    else:
+        raise ValueError(
+            f"Invalid model_type='{model_type}'. "
+            f"Allowed values: 'auto', 'lasso', 'xgboost'"
+        )
 
     # Scale if needed
     if use_scaling:
@@ -138,11 +230,34 @@ def main():
 
     # Load data
     print("Loading data...")
-    df = pd.read_parquet('data/processed/features_enhanced_5seasons_200players_phase1.parquet')
+    data_path = Path('data/processed/features_enhanced_5seasons_200players_phase1.parquet')
+    if not data_path.exists():
+        print(f"\nERROR: Data file not found: {data_path}")
+        print("Please run the feature engineering pipeline first:")
+        print("  python src/features/build_features.py")
+        sys.exit(1)
+    df = pd.read_parquet(data_path)
 
+    # Validate SPLIT column exists
+    if 'SPLIT' not in df.columns:
+        raise KeyError(
+            f"'SPLIT' column not found in DataFrame. "
+            f"Available columns: {list(df.columns)}\n"
+            f"Please ensure feature engineering created train/val/test splits."
+        )
+
+    # Create train/val/test splits
     train_df = df[df['SPLIT'] == 'train'].copy()
     val_df = df[df['SPLIT'] == 'val'].copy()
     test_df = df[df['SPLIT'] == 'test'].copy()
+
+    # Validate splits are not empty
+    if len(train_df) == 0:
+        raise ValueError("Training split is empty! Check SPLIT column values in data.")
+    if len(val_df) == 0:
+        raise ValueError("Validation split is empty! Check SPLIT column values in data.")
+    if len(test_df) == 0:
+        raise ValueError("Test split is empty! Check SPLIT column values in data.")
 
     print(f"  Train: {len(train_df):,} games")
     print(f"  Val:   {len(val_df):,} games")
@@ -231,8 +346,25 @@ def main():
     print(f"  Remaining gap:          {pts_current - pts_goal:.3f} points")
 
     # Save results
-    results_df.to_csv('results/experiments/phase1_comparison.csv', index=False)
-    print(f"\n✓ Results saved to: results/experiments/phase1_comparison.csv")
+    output_path = Path('results/experiments/phase1_comparison.csv')
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Track git commit for reproducibility
+    git_commit = get_git_commit()
+    if git_commit:
+        # Add git commit as a comment in the CSV
+        import datetime
+        with open(output_path, 'w') as f:
+            f.write(f"# Generated: {datetime.datetime.now().isoformat()}\n")
+            f.write(f"# Git commit: {git_commit}\n")
+            f.write(f"# Random seed: 42\n")
+        results_df.to_csv(output_path, index=False, mode='a')
+        print(f"\n✓ Results saved to: {output_path}")
+        print(f"✓ Git commit tracked: {git_commit[:8]}")
+    else:
+        results_df.to_csv(output_path, index=False)
+        print(f"\n✓ Results saved to: {output_path}")
+        print("⚠ Git commit not tracked (not in git repo)")
 
     # Feature importance for PTS (if XGBoost was used)
     # Note: We use Lasso for PTS, so we'll show Lasso coefficients instead

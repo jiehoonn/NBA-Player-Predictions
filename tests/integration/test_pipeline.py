@@ -43,10 +43,11 @@ def test_feature_engineering_pipeline():
     assert len(features["original"]) == 9
     assert len(features["usage"]) == 8
     assert len(features["contextual"]) == 6
-    assert len(features["all"]) == 23
+    # Now we have 38 total features (23 baseline + 15 Phase 1 advanced)
+    assert len(features["all"]) == 38
 
     # Verify no duplicates
-    assert len(set(features["all"])) == 23
+    assert len(set(features["all"])) == len(features["all"])
 
 
 def test_model_training_components():
@@ -65,7 +66,8 @@ def test_model_training_components():
 
     # Verify feature sets
     assert len(ORIGINAL_FEATURES) == 9
-    assert len(ALL_FEATURES) == 23
+    # Now we have 38 total features (23 baseline + 15 Phase 1 advanced)
+    assert len(ALL_FEATURES) == 38
 
 
 def test_data_collection_functions():
@@ -104,7 +106,7 @@ def test_evaluation_functions():
 
 def test_pipeline_compatibility():
     """Test that pipeline components are compatible with expected data structures."""
-    # Create a minimal mock dataframe with expected structure
+    # Create a minimal mock dataframe with expected structure (including Phase 1 features)
     mock_data = pd.DataFrame(
         {
             "PLAYER_ID": [1, 1, 1, 1, 1, 1],
@@ -117,6 +119,8 @@ def test_pipeline_compatibility():
             "FTA": [5, 6, 5, 5, 4, 6],
             "FG3A": [3, 4, 3, 4, 3, 3],
             "FG_PCT": [0.45, 0.48, 0.44, 0.46, 0.47, 0.45],
+            "TOV": [2, 3, 2, 2, 3, 2],  # Phase 1: Turnover data
+            "PLUS_MINUS": [5, 8, 3, 6, 4, 7],  # Phase 1: Plus/Minus data
         }
     )
 

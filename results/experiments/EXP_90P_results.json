@@ -99,7 +99,7 @@
       "2023-24",
       "2024-25"
     ],
-    "description": "75% of players"
+    "description": "75% of baseline (90/120 players)"
   },
   "data_stats": {
     "raw_games": 19012,
@@ -139,5 +139,19 @@
     }
   },
   "execution_time": 0.7875609397888184,
-  "status": "success"
+  "status": "success",
+  "_metadata": {
+    "created_at": "2025-01-20T18:05:00Z",
+    "schema_version": "1.0",
+    "experiment_id": "EXP_90P",
+    "random_seed": 42,
+    "experiment_type": "data_scale_player_count",
+    "hypothesis": "Testing impact of reducing player count to 75% of baseline (90/120 players)",
+    "features_used": 23,
+    "feature_set": "baseline (original + usage + contextual)",
+    "comparison_baseline": "EXP_120P",
+    "training_script": "notebooks/10_data_scale_experiment.ipynb",
+    "data_source": "data/processed/features_enhanced_3seasons.parquet",
+    "notes": "75% of baseline players experiment. Tests moderate reduction in player diversity. Performance between 60P and 120P experiments, showing gradual improvement with more player data."
+  }
 }

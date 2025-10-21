@@ -15,9 +15,11 @@ Usage:
 import argparse
 import time
 import os
+import logging
 from datetime import datetime
 import pandas as pd
 import numpy as np
+import requests
 from tqdm import tqdm
 from nba_api.stats.endpoints import (
     playergamelog,
@@ -25,6 +27,30 @@ from nba_api.stats.endpoints import (
     leaguedashplayerstats,
 )
 from nba_api.stats.static import players, teams
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+
+# Team stats column schema (centralized to avoid duplication)
+TEAM_STATS_COLUMNS = [
+    "TEAM_ID",
+    "TEAM_NAME",
+    "SEASON",
+    "GP",
+    "W",
+    "L",
+    "OFF_RATING",
+    "DEF_RATING",
+    "NET_RATING",
+    "PACE",
+]
 
 
 def retry_with_exponential_backoff(
@@ -47,22 +73,30 @@ def retry_with_exponential_backoff(
         try:
             result = func(*args, **kwargs)
             return result
-        except Exception as e:
+        except KeyboardInterrupt:
+            # Don't catch user interrupts
+            raise
+        except (requests.RequestException, ConnectionError, TimeoutError) as e:
+            # Retryable network/API errors
             if attempt == max_retries - 1:
-                print(f"  ✗ Failed after {max_retries} attempts: {e}")
-                return None
+                logger.error(f"  ✗ Failed after {max_retries} attempts: {e}")
+                break
 
             delay = min(base_delay * (2 ** attempt), max_delay)
-            print(f"  ⚠ Attempt {attempt + 1} failed: {e}")
-            print(f"  ↻ Retrying in {delay:.1f}s...")
+            logger.warning(f"  ⚠ Attempt {attempt + 1} failed: {e}")
+            logger.info(f"  ↻ Retrying in {delay:.1f}s...")
             time.sleep(delay)
+        except Exception as e:
+            # Non-retryable errors - log with stack trace and re-raise
+            logger.exception(f"  ✗ Non-retryable error: {e}")
+            raise
 
     return None
 
 
 def get_top_players(season="2023-24", top_n=120):
     """Get top N players by total minutes played in a season."""
-    print(f"Fetching top {top_n} players from {season} season...")
+    logger.info(f"Fetching top {top_n} players from {season} season...")
 
     try:
         player_stats = leaguedashplayerstats.LeagueDashPlayerStats(
@@ -78,19 +112,19 @@ def get_top_players(season="2023-24", top_n=120):
             ["PLAYER_ID", "PLAYER_NAME", "MIN", "GP"]
         ]
 
-        print(f"✓ Found {len(top_players)} players")
-        print(
+        logger.info(f"✓ Found {len(top_players)} players")
+        logger.info(
             f"  Minutes range: {top_players['MIN'].min():.0f} - {top_players['MIN'].max():.0f}"
         )
 
         return top_players["PLAYER_ID"].tolist()
 
     except Exception as e:
-        print(f"Error fetching player stats: {e}")
+        logger.exception(f"Error fetching player stats: {e}")
         return []
 
 
-def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim"):
+def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim", inter_request_delay=0.8):
     """
     Collect game logs for all players across multiple seasons with retry logic and checkpointing.
 
@@ -98,11 +132,12 @@ def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim"):
         player_ids: List of player IDs
         seasons: List of season strings
         checkpoint_dir: Directory to save intermediate checkpoints
+        inter_request_delay: Delay in seconds between API requests (default: 0.8)
 
     Returns:
         DataFrame with all game logs
     """
-    print(
+    logger.info(
         f"\nCollecting game logs for {len(player_ids)} players across {len(seasons)} seasons..."
     )
 
@@ -128,9 +163,9 @@ def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim"):
         return None
 
     for season in seasons:
-        print(f"\n{'='*60}")
-        print(f"Season: {season}")
-        print("=" * 60)
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Season: {season}")
+        logger.info("=" * 60)
 
         # Check for existing checkpoint
         checkpoint_file = os.path.join(
@@ -138,11 +173,42 @@ def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim"):
         )
 
         if os.path.exists(checkpoint_file):
-            print(f"  ↻ Loading checkpoint from {checkpoint_file}")
-            season_df = pd.read_parquet(checkpoint_file)
-            all_gamelogs.append(season_df)
-            print(f"  ✓ Loaded {len(season_df)} games from checkpoint")
-            continue
+            logger.info(f"  ↻ Loading checkpoint from {checkpoint_file}")
+            try:
+                season_df = pd.read_parquet(checkpoint_file)
+
+                # Validate checkpoint structure
+                required_cols = ["PLAYER_ID", "SEASON", "Game_ID", "GAME_DATE"]
+                missing_cols = [col for col in required_cols if col not in season_df.columns]
+
+                if missing_cols:
+                    raise ValueError(f"Checkpoint missing required columns: {missing_cols}")
+
+                if len(season_df) == 0:
+                    raise ValueError("Checkpoint is empty (0 rows)")
+
+                # Validate season matches
+                if "SEASON" in season_df.columns:
+                    checkpoint_seasons = season_df["SEASON"].unique()
+                    if season not in checkpoint_seasons:
+                        raise ValueError(
+                            f"Checkpoint season mismatch: expected {season}, "
+                            f"found {checkpoint_seasons}"
+                        )
+
+                all_gamelogs.append(season_df)
+                logger.info(f"  ✓ Loaded {len(season_df)} games from checkpoint")
+                continue
+
+            except (IOError, ValueError, Exception) as e:
+                logger.warning(f"  ⚠ Checkpoint validation failed: {e}")
+                logger.info(f"  ↻ Moving corrupted checkpoint to {checkpoint_file}.bad")
+                # Move bad checkpoint instead of deleting (for debugging)
+                bad_checkpoint = f"{checkpoint_file}.bad"
+                if os.path.exists(bad_checkpoint):
+                    os.remove(bad_checkpoint)
+                os.rename(checkpoint_file, bad_checkpoint)
+                logger.info(f"  → Rebuilding data for {season}...")
 
         # Collect data for this season
         season_gamelogs = []
@@ -168,18 +234,19 @@ def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim"):
                     }
                 )
 
-            time.sleep(0.8)  # Increased from 0.6 to 0.8 seconds
+            # Configurable inter-request delay to respect API rate limits
+            time.sleep(inter_request_delay)
 
         # Save checkpoint for this season
         if len(season_gamelogs) > 0:
             season_df = pd.concat(season_gamelogs, ignore_index=True)
             season_df.to_parquet(checkpoint_file)
             all_gamelogs.append(season_df)
-            print(f"\n  ✓ Checkpoint saved: {checkpoint_file}")
+            logger.info(f"\n  ✓ Checkpoint saved: {checkpoint_file}")
 
-    print(f"\n✓ Collected {len(all_gamelogs)} player-seasons")
+    logger.info(f"\n✓ Collected {len(all_gamelogs)} player-seasons")
     if failed_requests:
-        print(f"⚠ {len(failed_requests)} failed requests")
+        logger.warning(f"⚠ {len(failed_requests)} failed requests")
 
     # Handle empty list BEFORE concat
     if len(all_gamelogs) == 0:
@@ -200,7 +267,7 @@ def collect_team_stats(seasons):
     Returns:
         DataFrame with team stats, or empty DataFrame if all attempts fail
     """
-    print(f"\nCollecting team statistics for {len(seasons)} seasons...")
+    logger.info(f"\nCollecting team statistics for {len(seasons)} seasons...")
 
     all_team_stats = []
 
@@ -215,25 +282,13 @@ def collect_team_stats(seasons):
         df = team_stats.get_data_frames()[0]
         df["SEASON"] = season
 
-        df = df[
-            [
-                "TEAM_ID",
-                "TEAM_NAME",
-                "SEASON",
-                "GP",
-                "W",
-                "L",
-                "OFF_RATING",
-                "DEF_RATING",
-                "NET_RATING",
-                "PACE",
-            ]
-        ]
+        # Use centralized column schema
+        df = df[TEAM_STATS_COLUMNS]
 
         return df
 
     for season in seasons:
-        print(f"  Fetching {season} team stats...")
+        logger.info(f"  Fetching {season} team stats...")
 
         # Retry with exponential backoff
         result = retry_with_exponential_backoff(
@@ -245,37 +300,25 @@ def collect_team_stats(seasons):
 
         if result is not None:
             all_team_stats.append(result)
-            print(f"  ✓ Success for {season}")
+            logger.info(f"  ✓ Success for {season}")
             time.sleep(2.0)  # Increased delay between seasons
         else:
-            print(f"  ✗ Failed to collect {season} team stats after all retries")
+            logger.error(f"  ✗ Failed to collect {season} team stats after all retries")
 
     # Handle empty list BEFORE concat
     if len(all_team_stats) == 0:
-        print("⚠ WARNING: No team stats collected. Returning empty DataFrame.")
-        print("  Opponent stats will be missing from final dataset.")
-        return pd.DataFrame(
-            columns=[
-                "TEAM_ID",
-                "TEAM_NAME",
-                "SEASON",
-                "GP",
-                "W",
-                "L",
-                "OFF_RATING",
-                "DEF_RATING",
-                "NET_RATING",
-                "PACE",
-            ]
-        )
+        logger.warning("⚠ WARNING: No team stats collected. Returning empty DataFrame.")
+        logger.warning("  Opponent stats will be missing from final dataset.")
+        # Use centralized column schema
+        return pd.DataFrame(columns=TEAM_STATS_COLUMNS)
 
-    print(f"✓ Collected team stats for {len(all_team_stats)}/{len(seasons)} seasons")
+    logger.info(f"✓ Collected team stats for {len(all_team_stats)}/{len(seasons)} seasons")
     return pd.concat(all_team_stats, ignore_index=True)
 
 
 def add_game_context(df):
     """Add home/away, opponent info, rest days, and back-to-back flags."""
-    print("\nAdding game context features...")
+    logger.info("\nAdding game context features...")
 
     # Extract opponent and location
     def extract_opponent_and_location(matchup):
@@ -319,9 +362,9 @@ def add_game_context(df):
     # FIX: Merge on BOTH PLAYER_ID and Game_ID
     df = df.merge(rest_features_df, on=["PLAYER_ID", "Game_ID"], how="left")
 
-    print(f"✓ Game context added")
-    print(f"  Home games: {df['IS_HOME'].sum():,} ({df['IS_HOME'].mean()*100:.1f}%)")
-    print(f"  Back-to-back games: {df['IS_BACK_TO_BACK'].sum():,}")
+    logger.info(f"✓ Game context added")
+    logger.info(f"  Home games: {df['IS_HOME'].sum():,} ({df['IS_HOME'].mean()*100:.1f}%)")
+    logger.info(f"  Back-to-back games: {df['IS_BACK_TO_BACK'].sum():,}")
 
     return df
 
@@ -350,7 +393,7 @@ def merge_opponent_stats(gamelogs_df, team_stats_df):
     )
 
     coverage = enhanced_df["OPP_DEF_RATING"].notna().mean() * 100
-    print(f"✓ Opponent stats merged ({coverage:.1f}% coverage)")
+    logger.info(f"✓ Opponent stats merged ({coverage:.1f}% coverage)")
 
     return enhanced_df
 
@@ -448,33 +491,33 @@ def main():
             os.makedirs(output_dir, exist_ok=True)
 
         enhanced_df.to_parquet(args.output)
-        print(f"\n✓ Data saved successfully: {args.output}")
+        logger.info(f"\n✓ Data saved successfully: {args.output}")
 
     except Exception as e:
-        print(f"\n❌ ERROR saving file: {e}")
+        logger.error(f"\n❌ ERROR saving file: {e}")
         # Try to save to a backup location
         backup_file = "data/interim/backup_gamelogs.parquet"
         try:
             os.makedirs("data/interim", exist_ok=True)
             enhanced_df.to_parquet(backup_file)
-            print(f"  ✓ Saved backup to: {backup_file}")
+            logger.info(f"  ✓ Saved backup to: {backup_file}")
         except Exception as backup_error:
-            print(f"  ✗ Backup also failed: {backup_error}")
+            logger.error(f"  ✗ Backup also failed: {backup_error}")
             return
 
     elapsed = (datetime.now() - start_time).total_seconds() / 60
 
-    print("\n" + "=" * 70)
-    print("COLLECTION COMPLETE")
-    print("=" * 70)
-    print(f"  File: {args.output}")
-    print(f"  Records: {len(enhanced_df):,}")
-    print(f"  Players: {enhanced_df['PLAYER_ID'].nunique()}")
-    print(
+    logger.info("\n" + "=" * 70)
+    logger.info("COLLECTION COMPLETE")
+    logger.info("=" * 70)
+    logger.info(f"  File: {args.output}")
+    logger.info(f"  Records: {len(enhanced_df):,}")
+    logger.info(f"  Players: {enhanced_df['PLAYER_ID'].nunique()}")
+    logger.info(
         f"  Date range: {enhanced_df['GAME_DATE'].min().date()} to {enhanced_df['GAME_DATE'].max().date()}"
     )
-    print(f"  Time elapsed: {elapsed:.1f} minutes")
-    print("=" * 70)
+    logger.info(f"  Time elapsed: {elapsed:.1f} minutes")
+    logger.info("=" * 70)
 
 
 if __name__ == "__main__":

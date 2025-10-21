@@ -142,6 +142,7 @@ testing:
 
 # Notebook 09 Best Results (for reference)
 # These are the benchmark results from research phase
+# NOTE: From 3-season experiment (2022-25); expect new benchmarks after 5-season (2020-25) retraining
 benchmark:
   PTS:
     model: Lasso

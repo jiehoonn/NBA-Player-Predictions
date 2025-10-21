@@ -27,6 +27,18 @@ def add_rolling_features(df, windows=[3, 5]):
     """
     print(f"Adding rolling features (windows: {windows})...")
 
+    def calculate_trend(series):
+        """Calculate linear trend (slope) over a window."""
+        if len(series) < 2 or series.isna().all():
+            return 0
+        x = np.arange(len(series))
+        y = series.values
+        valid = ~np.isnan(y)
+        if valid.sum() < 2:
+            return 0
+        slope = np.polyfit(x[valid], y[valid], 1)[0]
+        return slope
+
     features = []
 
     for player_id in tqdm(df["PLAYER_ID"].unique(), desc="Players"):
@@ -71,7 +83,8 @@ def add_rolling_features(df, windows=[3, 5]):
 
         # 1. True Shooting % (better than FG%)
         # TS% = PTS / (2 * (FGA + 0.44 * FTA))
-        ts_pct = player_df["PTS"] / (2 * (player_df["FGA"] + 0.44 * player_df["FTA"] + 0.001))
+        denom = 2 * (player_df["FGA"] + 0.44 * player_df["FTA"]) + 0.001
+        ts_pct = player_df["PTS"] / denom
         for window in windows:
             player_df[f"ts_pct_last_{window}"] = (
                 ts_pct.shift(1).rolling(window, min_periods=1).mean()
@@ -82,7 +95,7 @@ def add_rolling_features(df, windows=[3, 5]):
         player_df["reb_last_game"] = player_df["REB"].shift(1)
         player_df["ast_last_game"] = player_df["AST"].shift(1)
 
-        # 3. Turnover rate (usage indicator)
+        # 3. Turnover average (usage indicator)
         for window in windows:
             player_df[f"tov_last_{window}"] = (
                 player_df["TOV"].shift(1).rolling(window, min_periods=1).mean()
@@ -96,18 +109,6 @@ def add_rolling_features(df, windows=[3, 5]):
 
         # 5. Performance trend (is player improving or declining?)
         # Linear regression slope of last 5 games
-        def calculate_trend(series):
-            """Calculate linear trend (slope) over a window."""
-            if len(series) < 2 or series.isna().all():
-                return 0
-            x = np.arange(len(series))
-            y = series.values
-            valid = ~np.isnan(y)
-            if valid.sum() < 2:
-                return 0
-            slope = np.polyfit(x[valid], y[valid], 1)[0]
-            return slope
-
         player_df["pts_trend_last_5"] = (
             player_df["PTS"].shift(1).rolling(5, min_periods=2).apply(calculate_trend, raw=False)
         )

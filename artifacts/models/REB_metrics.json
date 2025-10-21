@@ -1,10 +1,13 @@
 {
   "target": "REB",
   "model_name": "XGBoost",
-  "num_features": 23,
-  "train_mae": 2.0933417797872744,
-  "val_mae": 2.103429685655437,
-  "test_mae": 2.185411351898785,
-  "baseline_mae": 2.2238996579247434,
-  "improvement_pct": 1.7306673837017548
+  "num_features": 38,
+  "train_mae": 2.0947478828382065,
+  "val_mae": 2.074006754253425,
+  "test_mae": 2.1337202854948987,
+  "baseline_mae": 2.185658042744657,
+  "improvement_pct": 2.376298406887882,
+  "_metadata": {
+    "git_commit": "aef9a47ad4be41d8b5dfc37783004642570756fb"
+  }
 }

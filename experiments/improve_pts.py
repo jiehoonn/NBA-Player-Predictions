@@ -11,12 +11,10 @@ Approaches:
 """
 
 import pandas as pd
-import numpy as np
-from sklearn.linear_model import Lasso, Ridge, ElasticNet
+from sklearn.linear_model import Lasso
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 from xgboost import XGBRegressor
-import json
 
 def add_interaction_features(df):
     """Add interaction features that might help PTS prediction."""
@@ -37,7 +35,13 @@ def add_interaction_features(df):
 
     # Shot efficiency interactions
     df['fg_pct_x_fga'] = df['fg_pct_last_5'] * df['fga_last_5']
-    df['fg3_pct_ratio'] = df['fg3a_last_5'] / (df['fga_last_5'] + 1)  # +1 to avoid division by zero
+    # fg3_pct_ratio: Use masking to avoid division by zero bias
+    import numpy as np
+    df['fg3_pct_ratio'] = np.where(
+        df['fga_last_5'] > 0,
+        df['fg3a_last_5'] / df['fga_last_5'],
+        0.0  # Fallback for zero FGA (rare, but possible in early-season with min_periods=1)
+    )
 
     # Usage interactions
     df['total_attempts'] = df['fga_last_5'] + df['fta_last_5']
@@ -91,7 +95,20 @@ def main():
 
     # Load data
     print("Loading data...")
-    df = pd.read_parquet('data/processed/features_enhanced_5seasons_200players.parquet')
+    from pathlib import Path
+    data_path = Path('data/processed/features_enhanced_5seasons_200players.parquet')
+
+    if not data_path.exists():
+        raise FileNotFoundError(
+            f"Data file not found: {data_path}\n"
+            f"Please run the feature engineering pipeline first:\n"
+            f"  python src/features/build_features.py --input data/raw/... --output {data_path}"
+        )
+
+    try:
+        df = pd.read_parquet(data_path)
+    except Exception as e:
+        raise IOError(f"Failed to read parquet file at {data_path}: {e}") from e
 
     # Original features
     original_features = [
@@ -209,8 +226,9 @@ def main():
                    ['SPLIT', 'PTS', 'PLAYER_ID', 'GAME_DATE', 'SEASON', 'SEASON_ID',
                     'Game_ID', 'Player_ID', 'MATCHUP', 'WL', 'OPP_ABBREV', 'OPP_TEAM_NAME',
                     'OPP_TEAM_ID', 'OPP_GP', 'OPP_W', 'OPP_L'])
+    import numpy as np
     interaction_cols = [col for col in train_interact.columns
-                       if col not in exclude_cols and train_interact[col].dtype in ['int64', 'float64', 'bool']]
+                       if col not in exclude_cols and np.issubdtype(train_interact[col].dtype, np.number)]
     all_features = original_features + interaction_cols
 
     print(f"  Added {len(interaction_cols)} interaction features")
@@ -314,8 +332,10 @@ def main():
     print(results_df[['name', 'features', 'test_mae', 'improvement_pct']].to_string(index=False))
 
     # Save results
-    results_df.to_csv('results/experiments/pts_improvement_results.csv', index=False)
-    print(f"\n✓ Results saved to: results/experiments/pts_improvement_results.csv")
+    output_path = Path('results/experiments/pts_improvement_results.csv')
+    output_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+    results_df.to_csv(output_path, index=False)
+    print(f"\n✓ Results saved to: {output_path}")
 
     # Show top 3 feature importances if XGBoost + Interactions won
     if results_df.iloc[0]['experiment'] == 'EXP4_XGBoost_Interact':

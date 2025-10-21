@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Model Training Script - Train best-performing models
+Model Training Script - Train best-performing models (PRODUCTION)
 
-Based on notebook 09 findings:
-- PTS: Lasso (MAE 5.774, +3.9% vs baseline)
-- REB: XGBoost (MAE 2.185, +1.7% vs baseline)
-- AST: XGBoost (MAE 1.762, +2.6% vs baseline)
+Production Configuration (5 seasons, 200 players, 38 features):
+- PTS: Lasso (MAE 5.448, +3.7% vs baseline)
+- REB: XGBoost (MAE 2.134, +2.4% vs baseline) ✓ Goal achieved
+- AST: XGBoost (MAE 1.642, +2.2% vs baseline) ✓ Goal achieved
+
+Features: 38 total (23 baseline + 15 Phase 1 advanced)
 
 Usage:
     python src/models/train_models.py --input data/processed/features_enhanced.parquet --target PTS --output artifacts/models/
@@ -16,6 +18,7 @@ import joblib
 from pathlib import Path
 import pandas as pd
 import numpy as np
+import subprocess
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Lasso
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -55,7 +58,51 @@ CONTEXTUAL_FEATURES = [
     "OPP_PACE",
 ]
 
-ALL_FEATURES = ORIGINAL_FEATURES + USAGE_FEATURES + CONTEXTUAL_FEATURES
+# Phase 1 Advanced Features (15 total)
+PHASE1_FEATURES = [
+    # True Shooting %
+    "ts_pct_last_3",
+    "ts_pct_last_5",
+    # Last game performance
+    "pts_last_game",
+    "reb_last_game",
+    "ast_last_game",
+    # Turnover rate
+    "tov_last_3",
+    "tov_last_5",
+    # Plus/Minus
+    "plus_minus_last_3",
+    "plus_minus_last_5",
+    # Performance trends
+    "pts_trend_last_5",
+    "reb_trend_last_5",
+    "ast_trend_last_5",
+    # Scoring consistency
+    "pts_std_last_5",
+    "reb_std_last_5",
+    "ast_std_last_5",
+]
+
+# All features (38 total: 23 baseline + 15 Phase 1 advanced)
+ALL_FEATURES = ORIGINAL_FEATURES + USAGE_FEATURES + CONTEXTUAL_FEATURES + PHASE1_FEATURES
+
+
+def get_git_commit():
+    """
+    Get current git commit hash for reproducibility tracking.
+
+    Returns:
+        str: Git commit hash (40-character SHA-1) or None if not in git repo
+    """
+    try:
+        git_commit = subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'],
+            stderr=subprocess.DEVNULL
+        ).decode().strip()
+        return git_commit
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Not in a git repo or git not installed
+        return None
 
 
 def get_best_model(target, use_all_features=True):
@@ -211,6 +258,10 @@ def save_model(model_info, target, output_dir):
 
     # Save metrics separately
     metrics_file = output_dir / f"{target}_metrics.json"
+
+    # Capture git commit for reproducibility
+    git_commit = get_git_commit()
+
     metrics = {
         "target": target,
         "model_name": model_name,
@@ -221,6 +272,13 @@ def save_model(model_info, target, output_dir):
         "baseline_mae": model_info["baseline_mae"],
         "improvement_pct": model_info["improvement"],
     }
+
+    # Add git commit to metadata if available
+    if git_commit:
+        if "_metadata" not in metrics:
+            metrics["_metadata"] = {}
+        metrics["_metadata"]["git_commit"] = git_commit
+        print(f"✓ Git commit tracked: {git_commit[:8]}")
 
     import json
 
@@ -245,7 +303,7 @@ def main():
         "--features",
         choices=["original", "all"],
         default="all",
-        help="Feature set: original (9) or all (23)",
+        help="Feature set: original (9) or all (38: 23 baseline + 15 Phase 1 advanced)",
     )
 
     args = parser.parse_args()

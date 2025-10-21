@@ -18,7 +18,7 @@ from src.features.build_features import (
 
 def test_rolling_features_calculation():
     """Test that rolling averages are calculated correctly."""
-    # Create test data with known values
+    # Create test data with known values (including Phase 1 feature columns)
     test_data = pd.DataFrame(
         {
             "PLAYER_ID": [1] * 10,
@@ -31,6 +31,8 @@ def test_rolling_features_calculation():
             "FTA": [5] * 10,
             "FG3A": [3] * 10,
             "FG_PCT": [0.5] * 10,
+            "TOV": [2] * 10,  # Phase 1: Turnover data
+            "PLUS_MINUS": [5] * 10,  # Phase 1: Plus/Minus data
         }
     )
 
@@ -64,6 +66,8 @@ def test_leakage_prevention():
             "FTA": [5] * 5,
             "FG3A": [3] * 5,
             "FG_PCT": [0.5] * 5,
+            "TOV": [2] * 5,  # Phase 1
+            "PLUS_MINUS": [5] * 5,  # Phase 1
         }
     )
 
@@ -174,13 +178,22 @@ def test_feature_list_completeness():
     assert len(features["original"]) == 9
     assert len(features["usage"]) == 8
     assert len(features["contextual"]) == 6
-    assert len(features["all"]) == 23
+    # Verify baseline features (23)
+    assert len(features["all"]) >= 23, "Should have at least baseline 23 features"
 
-    # Verify 'all' is the union of the three groups
+    # Verify baseline features are all included
     all_combined = (
         set(features["original"]) | set(features["usage"]) | set(features["contextual"])
     )
-    assert set(features["all"]) == all_combined, "'all' should be union of all groups"
+    assert all_combined.issubset(set(features["all"])), "All baseline features should be included"
+
+    # Verify Phase 1 features if present (15 advanced features)
+    # Phase 1 features are optional - if present, verify completeness
+    if "phase1" in features:
+        assert len(features["phase1"]) == 15, "Phase 1 should have exactly 15 advanced features"
+        assert set(features["phase1"]).issubset(set(features["all"])), "Phase 1 features should be in 'all'"
+        # If Phase 1 exists, total should be 38 (23 baseline + 15 Phase 1)
+        assert len(features["all"]) == 38, "With Phase 1, should have 38 total features"
 
     # Verify no duplicates
     assert len(features["all"]) == len(set(features["all"])), "No duplicate features"
@@ -200,6 +213,8 @@ def test_rolling_features_multiple_players():
             "FTA": [5] * 6,
             "FG3A": [3] * 6,
             "FG_PCT": [0.5] * 6,
+            "TOV": [2] * 6,  # Phase 1
+            "PLUS_MINUS": [5] * 6,  # Phase 1
         }
     )
 

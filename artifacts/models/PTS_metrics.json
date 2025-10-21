@@ -1,10 +1,13 @@
 {
   "target": "PTS",
   "model_name": "Lasso",
-  "num_features": 23,
-  "train_mae": 5.74581318190167,
-  "val_mae": 5.7393375553502635,
-  "test_mae": 5.774000173783842,
-  "baseline_mae": 6.007753705815279,
-  "improvement_pct": 3.890864097926868
+  "num_features": 38,
+  "train_mae": 5.374425375299464,
+  "val_mae": 5.4268900586715,
+  "test_mae": 5.447953586005567,
+  "baseline_mae": 5.654583802024747,
+  "improvement_pct": 3.6542073343256765,
+  "_metadata": {
+    "git_commit": "aef9a47ad4be41d8b5dfc37783004642570756fb"
+  }
 }

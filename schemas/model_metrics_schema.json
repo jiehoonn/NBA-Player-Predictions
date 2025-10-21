@@ -1,0 +1,274 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/jiehoonn/NBA-Player-Predictions/schemas/model_metrics_schema.json",
+  "title": "Model Metrics Schema",
+  "description": "JSON schema for NBA player prediction model metrics files",
+  "type": "object",
+  "required": [
+    "target",
+    "model_name",
+    "num_features",
+    "train_mae",
+    "val_mae",
+    "test_mae",
+    "baseline_mae",
+    "improvement_pct",
+    "_metadata"
+  ],
+  "properties": {
+    "target": {
+      "type": "string",
+      "enum": ["PTS", "REB", "AST"],
+      "description": "Target variable to predict"
+    },
+    "model_name": {
+      "type": "string",
+      "enum": ["Lasso", "XGBoost"],
+      "description": "Machine learning model type"
+    },
+    "num_features": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Total number of input features"
+    },
+    "train_mae": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Mean Absolute Error on training set"
+    },
+    "val_mae": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Mean Absolute Error on validation set"
+    },
+    "test_mae": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Mean Absolute Error on test set"
+    },
+    "baseline_mae": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Baseline MAE (5-game rolling average)"
+    },
+    "improvement_pct": {
+      "type": "number",
+      "minimum": -100,
+      "maximum": 100000,
+      "description": "Percentage improvement over baseline"
+    },
+    "_metadata": {
+      "type": "object",
+      "required": [
+        "training_date",
+        "model_version",
+        "dataset",
+        "baseline",
+        "features",
+        "hyperparameters",
+        "training_env",
+        "model_artifact",
+        "training_script",
+        "evaluation_script",
+        "random_seed"
+      ],
+      "properties": {
+        "training_date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of model training"
+        },
+        "model_version": {
+          "type": "string",
+          "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semantic version identifier (e.g., v1.0.0)"
+        },
+        "dataset": {
+          "type": "object",
+          "required": ["source", "version", "seasons", "num_players", "total_games"],
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "Path to processed data file"
+            },
+            "version": {
+              "type": "string",
+              "description": "Dataset version identifier"
+            },
+            "seasons": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}$"
+              },
+              "minItems": 1,
+              "description": "NBA seasons included (e.g., '2023-24')"
+            },
+            "num_players": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Number of players in dataset"
+            },
+            "total_games": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Total game records"
+            },
+            "train_games": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "val_games": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "test_games": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "split_strategy": {
+              "type": "string",
+              "description": "Data splitting methodology"
+            }
+          }
+        },
+        "baseline": {
+          "type": "object",
+          "required": ["type", "description", "mae"],
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Baseline model type"
+            },
+            "description": {
+              "type": "string",
+              "description": "Baseline model explanation"
+            },
+            "mae": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Baseline MAE"
+            }
+          }
+        },
+        "features": {
+          "type": "object",
+          "required": ["total", "features_list"],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Total feature count"
+            },
+            "baseline": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Baseline feature count"
+            },
+            "phase1_advanced": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Phase 1 advanced feature count"
+            },
+            "feature_sets": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Feature set categories"
+            },
+            "features_list": {
+              "type": "array",
+              "items": {"type": "string"},
+              "minItems": 1,
+              "description": "Complete list of feature names"
+            },
+            "baseline_features": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Baseline feature names"
+            },
+            "phase1_features": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Phase 1 advanced feature names"
+            },
+            "change_log": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "previous_count": {"type": "integer"},
+                "added_count": {"type": "integer"},
+                "rationale": {"type": "string"},
+                "reference": {"type": "string"},
+                "author": {"type": "string"}
+              }
+            }
+          }
+        },
+        "hyperparameters": {
+          "type": "object",
+          "required": ["model_type"],
+          "properties": {
+            "model_type": {
+              "type": "string",
+              "enum": ["Lasso", "XGBoost"]
+            },
+            "alpha": {"type": "number"},
+            "max_iter": {"type": "integer"},
+            "random_state": {"type": "integer"},
+            "n_estimators": {"type": "integer"},
+            "max_depth": {"type": "integer"},
+            "learning_rate": {"type": "number"},
+            "n_jobs": {"type": "integer"},
+            "objective": {"type": "string"},
+            "preprocessing": {"type": "string"}
+          }
+        },
+        "training_env": {
+          "type": "object",
+          "required": ["python_version", "key_libraries"],
+          "properties": {
+            "python_version": {"type": "string"},
+            "key_libraries": {
+              "type": "object",
+              "additionalProperties": {"type": "string"}
+            },
+            "environment_file": {"type": "string"}
+          }
+        },
+        "model_artifact": {
+          "type": "object",
+          "required": ["path", "format"],
+          "properties": {
+            "path": {"type": "string"},
+            "size_mb": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Model file size in megabytes"
+            },
+            "format": {"type": "string"},
+            "checksum_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$",
+              "description": "SHA256 checksum for file integrity verification"
+            }
+          }
+        },
+        "training_script": {"type": "string"},
+        "evaluation_script": {"type": "string"},
+        "random_seed": {
+          "type": "integer",
+          "description": "Random seed for reproducibility"
+        },
+        "notes": {"type": "string"},
+        "git_commit": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$",
+          "description": "Git commit hash for code versioning"
+        }
+      }
+    }
+  }
+}
