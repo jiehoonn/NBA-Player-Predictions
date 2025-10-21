@@ -43,8 +43,9 @@ def test_feature_engineering_pipeline():
     assert len(features["original"]) == 9
     assert len(features["usage"]) == 8
     assert len(features["contextual"]) == 6
-    # Now we have 38 total features (23 baseline + 15 Phase 1 advanced)
-    assert len(features["all"]) == 38
+    # build_features.py creates 23 baseline features
+    # Phase 1 advanced features (15) are defined in train_models.py
+    assert len(features["all"]) == 23
 
     # Verify no duplicates
     assert len(set(features["all"])) == len(features["all"])
