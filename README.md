@@ -23,7 +23,7 @@ We have successfully built, tested, and deployed an end-to-end machine learning 
 
 ### 🏆 Key Achievements
 
-- ✅ **Data Collection Pipeline**: Successfully collected 5 seasons (2020-25) of NBA data covering 200 top players (~40,000+ games)
+- ✅ **Data Collection Pipeline**: Successfully collected 5 seasons (2020-25) of NBA data covering 200 top players (57,812 games)
 - ✅ **Advanced Feature Engineering**: Implemented **38 total leakage-safe features** (23 baseline + 15 Phase 1 advanced) using strict temporal ordering
 - ✅ **Model Selection & Training**: Identified best models through systematic comparison (Lasso for PTS, XGBoost for REB/AST)
 - ✅ **Strong Performance Results**:
@@ -32,7 +32,8 @@ We have successfully built, tested, and deployed an end-to-end machine learning 
   - **PTS: MAE 5.448 (+3.7% improvement, working toward 3.6 goal)** 🚧 In Progress
 - ✅ **Comprehensive Testing**: 16 unit + 8 integration tests validating mathematical correctness and leakage prevention
 - ✅ **CI/CD Pipeline**: Automated testing, linting, and formatting on Python 3.10, 3.11, 3.12
-- ✅ **Documentation**: Complete test strategy, evaluation reports, and 31 visualization plots
+- ✅ **Schema Validation & Reproducibility**: JSON schemas for strict data quality + environment snapshots for exact reproducibility
+- ✅ **Documentation**: Complete test strategy, evaluation reports, and 39 visualization plots
 
 ---
 
@@ -104,9 +105,10 @@ Our development followed a rigorous **research-to-production** workflow document
   - `src/features/build_features.py` - Leakage-safe feature engineering
   - `src/models/train_models.py` - Best model selection from Notebook 09
   - `src/models/evaluate_models.py` - Comprehensive evaluation
-  - `src/visualization/make_plots.py` - 31 publication-quality plots
+  - `src/visualization/make_plots.py` - 39 publication-quality plots
 - **Added comprehensive testing** (16 unit + 8 integration tests)
 - **CI/CD pipeline** with automated testing and code quality checks
+- **JSON schema validation** for model metrics and experimental results
 
 ---
 
@@ -225,12 +227,33 @@ df.merge(opponent_stats, on=['PLAYER_ID', 'Game_ID'], how='left')
 #### 3. Time-Based Splits (No Shuffling!)
 
 ```python
-# Train: before 2024-07-31 (67.8%)
-# Val: 2024-08-01 to 2024-12-31 (13.4%)
-# Test: after 2024-12-31 (18.8%)
+# Train: 44,600 games (78.5%) - before 2024-07-31
+# Val:    5,100 games (9.0%)  - 2024-08-01 to 2024-12-31
+# Test:   7,112 games (12.5%) - after 2024-12-31
 ```
 
 **Never shuffle** - maintains temporal ordering to prevent leakage.
+
+#### 4. JSON Schema Validation
+
+All model metrics and experimental results are validated against strict JSON schemas:
+
+**schemas/model_metrics_schema.json**: Validates model training outputs
+
+- Enforces semantic versioning (v<major>.<minor>.<patch>$)
+- Numeric bounds on improvement percentages (-100 to 100,000)
+- Required fields for reproducibility (git_commit, random_seed, training_date, model_artifact)
+- Type validation: size_mb as number (not string), proper SHA256 checksum format
+
+**schemas/experiment_results_schema.json**: Validates data scale experiments
+
+- Enforces num_players in all experimental results (required field)
+- Validates season format patterns (YYYY-YY)
+- Ensures complete metadata tracking for reproducibility
+
+**Impact**: Prevents invalid data from entering the pipeline, catches errors at validation time rather than runtime.
+
+**Validation**: All existing results validated against schemas post-implementation. Tests include syntax checks + structure validation.
 
 ---
 
@@ -259,11 +282,11 @@ pytest tests/integration/ -v
 
 **Output:**
 
-- `data/raw/player_gamelogs_enhanced_2020-2025.parquet` - Raw data (~40,000+ games)
-- `data/processed/features_enhanced_5seasons.parquet` - Engineered features (~38,000+ games after cleaning)
+- `data/raw/player_gamelogs_enhanced.parquet` - Raw data (57,812 games)
+- `data/processed/features_enhanced.parquet` - Engineered features (56,812 games after cleaning)
 - `artifacts/models/*.joblib` - Trained models
 - `reports/evaluation_report.md` - Performance metrics
-- `reports/figures/*.png` - 31+ visualizations
+- `reports/figures/*.png` - 39 visualizations
 
 ---
 
@@ -280,24 +303,30 @@ NBA-Player-Predictions/
 │   │   ├── train_models.py       # Best models from Notebook 09
 │   │   └── evaluate_models.py    # Comprehensive evaluation
 │   └── visualization/
-│       └── make_plots.py         # 31 publication-quality plots
+│       └── make_plots.py         # 39 publication-quality plots
 ├── tests/
 │   ├── unit/                     # 16 unit tests
 │   │   ├── test_features.py      # Feature logic (7 tests)
 │   │   └── test_models.py        # Model logic (9 tests)
 │   └── integration/              # 8 integration tests
 │       └── test_pipeline.py
-├── notebooks/                    # Research journey (01-09)
+├── notebooks/                    # Research journey (01-10)
 │   ├── 06_comprehensive_ml_exploration.ipynb  # 1 season attempt
 │   ├── 07_enhanced_data_collection.ipynb      # 5 seasons + bug fix
 │   ├── 08_enhanced_feature_engineering.ipynb  # 38 features
-│   └── 09_enhanced_ml_exploration.ipynb       # ⭐ Best model selection
+│   ├── 09_enhanced_ml_exploration.ipynb       # ⭐ Best model selection
+│   └── 10_data_scale_experiment.ipynb         # Data scale experiments
+├── schemas/                      # JSON validation schemas
+│   ├── model_metrics_schema.json            # Model metrics validation
+│   └── experiment_results_schema.json       # Experiment results validation
+├── environments/                 # Environment snapshots
+│   └── train_env_YYYY-MM-DD.txt # pip freeze outputs for reproducibility
 ├── reports/
-│   ├── figures/                  # 31 visualization plots
+│   ├── figures/                  # 39 visualization plots
 │   └── evaluation_report.md      # Performance metrics
 ├── data/                         # Data files (gitignored)
-│   ├── raw/                      # Raw NBA data
-│   └── processed/                # Engineered features
+│   ├── raw/                      # Raw NBA data (57,812 games)
+│   └── processed/                # Engineered features (56,812 games)
 ├── artifacts/                    # Trained models (gitignored)
 │   └── models/
 ├── config.yaml                   # Centralized configuration
@@ -340,7 +369,8 @@ Our current PTS model (MAE 5.77) is **60% of the way to our goal** (3.6). To bri
 ### 📚 Complete Documentation
 
 - **[reports/evaluation_report.md](reports/evaluation_report.md)**: Detailed performance metrics
-- **Notebooks 06-09**: Research journey and model selection process
+- **[schemas/](schemas/)**: JSON validation schemas for model metrics and experiments
+- **Notebooks 06-10**: Research journey, model selection process, and data scale experiments
 
 ---
 
