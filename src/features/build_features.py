@@ -110,13 +110,22 @@ def add_rolling_features(df, windows=[3, 5]):
         # 5. Performance trend (is player improving or declining?)
         # Linear regression slope of last 5 games
         player_df["pts_trend_last_5"] = (
-            player_df["PTS"].shift(1).rolling(5, min_periods=2).apply(calculate_trend, raw=False)
+            player_df["PTS"]
+            .shift(1)
+            .rolling(5, min_periods=2)
+            .apply(calculate_trend, raw=False)
         )
         player_df["reb_trend_last_5"] = (
-            player_df["REB"].shift(1).rolling(5, min_periods=2).apply(calculate_trend, raw=False)
+            player_df["REB"]
+            .shift(1)
+            .rolling(5, min_periods=2)
+            .apply(calculate_trend, raw=False)
         )
         player_df["ast_trend_last_5"] = (
-            player_df["AST"].shift(1).rolling(5, min_periods=2).apply(calculate_trend, raw=False)
+            player_df["AST"]
+            .shift(1)
+            .rolling(5, min_periods=2)
+            .apply(calculate_trend, raw=False)
         )
 
         # 6. Scoring consistency (std dev - lower is more predictable)

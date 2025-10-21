@@ -222,23 +222,31 @@ def test_feature_constants():
 
     # Check ALL_FEATURES contains baseline features
     combined = set(ORIGINAL_FEATURES + USAGE_FEATURES + CONTEXTUAL_FEATURES)
-    assert combined.issubset(set(ALL_FEATURES)), "Baseline features should be in ALL_FEATURES"
+    assert combined.issubset(
+        set(ALL_FEATURES)
+    ), "Baseline features should be in ALL_FEATURES"
 
     # Validate Phase 1 feature set
     assert len(PHASE1_FEATURES) == 15, "Phase 1 should have exactly 15 features"
     assert len(set(PHASE1_FEATURES)) == 15, "Phase 1 features should have no duplicates"
-    assert set(PHASE1_FEATURES).issubset(set(ALL_FEATURES)), "Phase 1 features should be in ALL_FEATURES"
+    assert set(PHASE1_FEATURES).issubset(
+        set(ALL_FEATURES)
+    ), "Phase 1 features should be in ALL_FEATURES"
 
     # Verify Phase 1 features are disjoint from baseline features
     baseline_features = set(ORIGINAL_FEATURES + USAGE_FEATURES + CONTEXTUAL_FEATURES)
-    assert set(PHASE1_FEATURES).isdisjoint(baseline_features), "Phase 1 features should not overlap with baseline"
+    assert set(PHASE1_FEATURES).isdisjoint(
+        baseline_features
+    ), "Phase 1 features should not overlap with baseline"
 
     # Spot-check specific Phase 1 features
     assert "ts_pct_last_3" in PHASE1_FEATURES, "TS% should be in Phase 1"
     assert "pts_last_game" in PHASE1_FEATURES, "Last game stats should be in Phase 1"
     assert "plus_minus_last_3" in PHASE1_FEATURES, "Plus/minus should be in Phase 1"
     assert "pts_trend_last_5" in PHASE1_FEATURES, "Trends should be in Phase 1"
-    assert "pts_std_last_5" in PHASE1_FEATURES, "Consistency metrics should be in Phase 1"
+    assert (
+        "pts_std_last_5" in PHASE1_FEATURES
+    ), "Consistency metrics should be in Phase 1"
 
 
 if __name__ == "__main__":

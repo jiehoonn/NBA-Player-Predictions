@@ -185,13 +185,19 @@ def test_feature_list_completeness():
     all_combined = (
         set(features["original"]) | set(features["usage"]) | set(features["contextual"])
     )
-    assert all_combined.issubset(set(features["all"])), "All baseline features should be included"
+    assert all_combined.issubset(
+        set(features["all"])
+    ), "All baseline features should be included"
 
     # Verify Phase 1 features if present (15 advanced features)
     # Phase 1 features are optional - if present, verify completeness
     if "phase1" in features:
-        assert len(features["phase1"]) == 15, "Phase 1 should have exactly 15 advanced features"
-        assert set(features["phase1"]).issubset(set(features["all"])), "Phase 1 features should be in 'all'"
+        assert (
+            len(features["phase1"]) == 15
+        ), "Phase 1 should have exactly 15 advanced features"
+        assert set(features["phase1"]).issubset(
+            set(features["all"])
+        ), "Phase 1 features should be in 'all'"
         # If Phase 1 exists, total should be 38 (23 baseline + 15 Phase 1)
         assert len(features["all"]) == 38, "With Phase 1, should have 38 total features"
 

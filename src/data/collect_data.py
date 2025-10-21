@@ -32,8 +32,8 @@ from nba_api.stats.static import players, teams
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
 
@@ -82,7 +82,7 @@ def retry_with_exponential_backoff(
                 logger.error(f"  ✗ Failed after {max_retries} attempts: {e}")
                 break
 
-            delay = min(base_delay * (2 ** attempt), max_delay)
+            delay = min(base_delay * (2**attempt), max_delay)
             logger.warning(f"  ⚠ Attempt {attempt + 1} failed: {e}")
             logger.info(f"  ↻ Retrying in {delay:.1f}s...")
             time.sleep(delay)
@@ -124,7 +124,9 @@ def get_top_players(season="2023-24", top_n=120):
         return []
 
 
-def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim", inter_request_delay=0.8):
+def collect_player_gamelogs(
+    player_ids, seasons, checkpoint_dir="data/interim", inter_request_delay=0.8
+):
     """
     Collect game logs for all players across multiple seasons with retry logic and checkpointing.
 
@@ -179,10 +181,14 @@ def collect_player_gamelogs(player_ids, seasons, checkpoint_dir="data/interim", 
 
                 # Validate checkpoint structure
                 required_cols = ["PLAYER_ID", "SEASON", "Game_ID", "GAME_DATE"]
-                missing_cols = [col for col in required_cols if col not in season_df.columns]
+                missing_cols = [
+                    col for col in required_cols if col not in season_df.columns
+                ]
 
                 if missing_cols:
-                    raise ValueError(f"Checkpoint missing required columns: {missing_cols}")
+                    raise ValueError(
+                        f"Checkpoint missing required columns: {missing_cols}"
+                    )
 
                 if len(season_df) == 0:
                     raise ValueError("Checkpoint is empty (0 rows)")
@@ -312,7 +318,9 @@ def collect_team_stats(seasons):
         # Use centralized column schema
         return pd.DataFrame(columns=TEAM_STATS_COLUMNS)
 
-    logger.info(f"✓ Collected team stats for {len(all_team_stats)}/{len(seasons)} seasons")
+    logger.info(
+        f"✓ Collected team stats for {len(all_team_stats)}/{len(seasons)} seasons"
+    )
     return pd.concat(all_team_stats, ignore_index=True)
 
 
@@ -363,7 +371,9 @@ def add_game_context(df):
     df = df.merge(rest_features_df, on=["PLAYER_ID", "Game_ID"], how="left")
 
     logger.info(f"✓ Game context added")
-    logger.info(f"  Home games: {df['IS_HOME'].sum():,} ({df['IS_HOME'].mean()*100:.1f}%)")
+    logger.info(
+        f"  Home games: {df['IS_HOME'].sum():,} ({df['IS_HOME'].mean()*100:.1f}%)"
+    )
     logger.info(f"  Back-to-back games: {df['IS_BACK_TO_BACK'].sum():,}")
 
     return df

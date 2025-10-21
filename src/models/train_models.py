@@ -84,7 +84,9 @@ PHASE1_FEATURES = [
 ]
 
 # All features (38 total: 23 baseline + 15 Phase 1 advanced)
-ALL_FEATURES = ORIGINAL_FEATURES + USAGE_FEATURES + CONTEXTUAL_FEATURES + PHASE1_FEATURES
+ALL_FEATURES = (
+    ORIGINAL_FEATURES + USAGE_FEATURES + CONTEXTUAL_FEATURES + PHASE1_FEATURES
+)
 
 
 def get_git_commit():
@@ -95,10 +97,13 @@ def get_git_commit():
         str: Git commit hash (40-character SHA-1) or None if not in git repo
     """
     try:
-        git_commit = subprocess.check_output(
-            ['git', 'rev-parse', 'HEAD'],
-            stderr=subprocess.DEVNULL
-        ).decode().strip()
+        git_commit = (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+            )
+            .decode()
+            .strip()
+        )
         return git_commit
     except (subprocess.CalledProcessError, FileNotFoundError):
         # Not in a git repo or git not installed
