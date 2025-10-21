@@ -13,7 +13,7 @@
 
 ### 🎥 Presentation Video
 
-_[Video will be added here after recording]_
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/Yehj5Id61PQ/0.jpg)](https://www.youtube.com/watch?v=Yehj5Id61PQ)
 
 ---
 
