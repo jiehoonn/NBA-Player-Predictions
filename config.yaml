@@ -1,158 +1,222 @@
-# NBA Player Performance Prediction - Configuration File
-# Based on Notebook 09 findings and production pipeline requirements
+# NBA Player Prediction Configuration
+# All project parameters in one place
 
-# Data Collection Parameters
-data_collection:
+# Data Collection
+data:
   seasons:
+    - "2019-20"
     - "2020-21"
     - "2021-22"
     - "2022-23"
     - "2023-24"
-    - "2024-25"
-  top_players: 200  # Top N players by minutes played (extended for experiment)
-  reference_season: "2023-24"  # Season to use for player selection
-  rate_limit_delay: 0.6  # Seconds between API calls
-  retry_delay: 2.0  # Seconds to wait after failed request
 
-# Feature Engineering Parameters
+  n_players: 200  # Top N players by minutes played
+
+  api:
+    rate_limit_seconds: 0.6  # ~1 request per second
+    timeout_seconds: 30
+    max_retries: 3
+
+  paths:
+    raw: "data/raw"
+    processed: "data/processed"
+    cache: "data/cache"
+
+# Feature Engineering
 features:
-  rolling_windows:
-    - 3
-    - 5
+  # Rolling window sizes
+  rolling_windows: [3, 5, 10]
 
-  # Feature groups
-  original_features:
-    - pts_last_3
-    - pts_last_5
-    - reb_last_3
-    - reb_last_5
-    - ast_last_3
-    - ast_last_5
-    - min_last_3
-    - min_last_5
-    - games_played
-
-  usage_features:
-    - fga_last_3
-    - fga_last_5
-    - fta_last_3
-    - fta_last_5
-    - fg3a_last_3
-    - fg3a_last_5
-    - fg_pct_last_3
-    - fg_pct_last_5
-
-  contextual_features:
-    - IS_HOME
-    - REST_DAYS
-    - IS_BACK_TO_BACK
-    - OPP_DEF_RATING
-    - OPP_OFF_RATING
-    - OPP_PACE
-
-  # Data cleaning
-  min_games_played: 5  # Minimum games before using player data
-
-  # Train/Val/Test splits (time-based)
-  train_end_date: "2024-07-31"  # End of 2023-24 season
-  val_end_date: "2024-12-31"     # Mid 2024-25 season
-
-# Model Training Parameters
-models:
-  targets:
+  # Stats to create rolling features for
+  rolling_stats:
     - PTS
     - REB
     - AST
+    - MIN
+    - FGA
+    - FG_PCT
+    - FG3A
+    - FG3_PCT
+    - FTA
+    - FT_PCT
 
-  # Model hyperparameters (from Notebook 09)
-  lasso:
-    alpha: 0.1
-    max_iter: 2000
-    random_state: 42
+  # Advanced features (Phase 3)
+  advanced:
+    enable_shot_locations: true
+    enable_efficiency_metrics: true
+    enable_matchup_history: true
+    enable_trend_indicators: true
 
-  xgboost:
-    n_estimators: 100
-    max_depth: 3
-    learning_rate: 0.05
-    random_state: 42
-    n_jobs: -1
-    verbosity: 0
+  # Leakage prevention
+  shift_periods: 1  # Always shift by 1 before rolling
 
-  # Feature set to use
-  use_all_features: true  # If false, use only original 9 features
+# Train/Validation/Test Splits
+splits:
+  # Temporal splits (never shuffle!)
+  train_end_date: "2024-01-01"
+  val_end_date: "2024-07-01"
+  # Test is everything after val_end_date
 
-# Evaluation Parameters
+  # Minimum games for player inclusion
+  min_games_played: 10
+
+# Model Configuration
+models:
+  random_seed: 42
+
+  # Baseline
+  baseline:
+    type: "rolling_average"
+    window: 5
+
+  # Models for each target
+  pts:
+    primary_models:
+      - name: "lasso"
+        params:
+          alpha: 0.1
+          max_iter: 10000
+
+      - name: "xgboost"
+        params:
+          n_estimators: 200
+          max_depth: 5
+          learning_rate: 0.03
+          subsample: 0.8
+          colsample_bytree: 0.8
+          random_state: 42
+
+      - name: "lightgbm"
+        params:
+          n_estimators: 200
+          max_depth: 5
+          learning_rate: 0.03
+          subsample: 0.8
+          colsample_bytree: 0.8
+          random_state: 42
+
+    # Ensemble weights
+    ensemble:
+      lasso: 0.3
+      xgboost: 0.35
+      lightgbm: 0.35
+
+  reb:
+    primary_model: "xgboost"
+    params:
+      n_estimators: 100
+      max_depth: 3
+      learning_rate: 0.05
+      subsample: 0.8
+      random_state: 42
+
+  ast:
+    primary_model: "xgboost"
+    params:
+      n_estimators: 100
+      max_depth: 3
+      learning_rate: 0.05
+      subsample: 0.8
+      random_state: 42
+
+  # Hyperparameter search (optional)
+  hyperparameter_search:
+    enable: false  # Set true for grid search
+    cv_splits: 5
+    scoring: "neg_mean_absolute_error"
+
+# Evaluation
 evaluation:
   metrics:
-    - mae   # Mean Absolute Error (primary)
-    - rmse  # Root Mean Squared Error
-    - r2    # R-squared
+    - MAE  # Primary metric
+    - RMSE
+    - R2
+    - MAPE
 
-  baseline: "5_game_rolling"  # Baseline for comparison
+  # Analysis slices
+  slices:
+    - name: "overall"
+      description: "All test games"
 
-  # Project goals (MAE targets from proposal)
-  goals:
-    PTS: 3.6
-    REB: 2.2
-    AST: 2.0
+    - name: "top_20_players"
+      description: "Top 20 by minutes in test period"
 
-# Visualization Parameters
+    - name: "by_position"
+      description: "Guard vs Forward vs Center"
+
+    - name: "by_rest"
+      description: "0, 1, 2, 3+ rest days"
+
+    - name: "home_away"
+      description: "Home vs Away games"
+
+  # Bootstrap confidence intervals
+  bootstrap:
+    n_iterations: 1000
+    confidence_level: 0.95
+
+# Visualization
 visualization:
-  figure_dpi: 300
-  figure_format: png
+  style: "seaborn"
+  figure_size: [10, 6]
+  dpi: 300
 
   plots:
-    - performance        # Performance comparison across targets
-    - importance         # Feature importance (XGBoost only)
-    - predictions        # Predictions vs actual scatter
-    - errors             # Error distribution histogram
-    - timeseries         # Time series sample predictions
+    # Exploration
+    - distribution_plots
+    - correlation_heatmap
+    - time_series_trends
 
-  timeseries:
-    n_games: 50         # Number of games to show in time series
+    # Model performance
+    - predictions_vs_actual
+    - error_distribution
+    - feature_importance
+    - residual_analysis
 
-  feature_importance:
-    top_n: 15           # Show top N features
+  # Interactive dashboard
+  dashboard:
+    enable: true  # Set false to skip
+    port: 8501  # Streamlit default
 
-# File Paths
-paths:
-  # Data directories
-  data_raw: data/raw
-  data_interim: data/interim
-  data_processed: data/processed
-
-  # Output directories
-  models: artifacts/models
-  metrics: artifacts/metrics
-  reports: reports
-  figures: reports/figures
-
-  # Specific files
-  raw_data_file: player_gamelogs_enhanced_2020-2025.parquet
-  processed_features_file: features_enhanced_5seasons.parquet
-  evaluation_report: evaluation_report.md
-
-# Testing Parameters
+# Testing
 testing:
-  sample_data_file: data/raw/player_gamelogs_2023-24_sample.parquet
-  test_output_dir: artifacts/models_test
-  quick_test_seasons:
-    - "2023-24"
-  quick_test_players: 20
+  coverage_threshold: 80  # Minimum code coverage %
 
-# Notebook 09 Best Results (for reference)
-# These are the benchmark results from research phase
-# NOTE: From 3-season experiment (2022-25); expect new benchmarks after 5-season (2020-25) retraining
-benchmark:
-  PTS:
-    model: Lasso
-    mae: 5.774
-    improvement_pct: 3.9
-  REB:
-    model: XGBoost
-    mae: 2.185
-    improvement_pct: 1.7
-  AST:
-    model: XGBoost
-    mae: 1.762
-    improvement_pct: 2.6
+  test_data:
+    n_games: 1000  # Size of test dataset for unit tests
+    n_players: 10
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "nba_predictions.log"
+
+# Output
+output:
+  models_dir: "models"
+  results_dir: "results"
+
+  save_models: true
+  save_predictions: true
+  save_metrics: true
+
+  # Artifact naming
+  timestamp_format: "%Y%m%d_%H%M%S"
+
+# Goals (from GOALS.md)
+goals:
+  tier1:  # Must achieve
+    pts: 5.09
+    reb: 1.97
+    ast: 1.51
+
+  tier2:  # Target
+    pts: 4.50
+    reb: 2.00
+    ast: 1.50
+
+  tier3:  # Stretch
+    pts: 3.80
+    reb: 1.80
+    ast: 1.30

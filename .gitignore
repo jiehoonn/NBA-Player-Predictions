@@ -4,74 +4,54 @@ __pycache__/
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
+dist/
+build/
 *.egg
 
-# Virtual Environment
+# Virtual environments
 venv/
-ENV/
 env/
+ENV/
 .venv
 
-# Jupyter Notebooks
-.ipynb_checkpoints
-*.ipynb_checkpoints/
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb_checkpoints
 
-# Data files (raw data can be large; regenerate using scripts)
-data/raw/*.parquet
-data/interim/*.parquet
-data/processed/*.parquet
-data/cache/*.json
-data/cache/*.pkl
-
-# Keep directory structure
+# Data files (too large for git)
+data/raw/*
+data/processed/*
+data/cache/*
 !data/raw/.gitkeep
-!data/interim/.gitkeep
 !data/processed/.gitkeep
 !data/cache/.gitkeep
-!data/reference/.gitkeep
 
-# Model artifacts (can be regenerated)
-artifacts/models/*.joblib
-artifacts/models/*.pkl
-artifacts/metrics/*.json
-artifacts/shap/*.pkl
+# Model files (too large for git)
+models/*
+!models/.gitkeep
+*.joblib
+*.pkl
+*.h5
+*.pt
+*.pth
 
-# Reports (can be regenerated)
-# reports/figures/*.png
-# reports/figures/*.pdf
-# reports/cleaning/*.json
+# Results (generated, can be recreated)
+results/figures/*
+results/metrics/*
+!results/figures/.gitkeep
+!results/metrics/.gitkeep
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# IDEs
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-.DS_Store
 
-# Environment variables
-.env
-.env.local
+# OS
+.DS_Store
+Thumbs.db
 
 # Logs
 *.log
@@ -79,4 +59,16 @@ logs/
 
 # Temporary files
 *.tmp
-*.bak
+*.temp
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Environment variables
+.env
+.env.local
+
+# MyPy
+.mypy_cache/
