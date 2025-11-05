@@ -21,6 +21,9 @@ matplotlib==3.9.2
 seaborn==0.13.2
 plotly==5.24.1
 
+# Statistical Analysis (for EDA)
+statsmodels==0.14.4
+
 # Interactive Dashboard (optional)
 streamlit==1.39.0
 

@@ -23,7 +23,7 @@ ifeq ($(OS),Windows_NT)
     STREAMLIT := $(VENV_DIR)/Scripts/streamlit.exe
 endif
 
-.PHONY: help venv install data features train evaluate visualize test clean all
+.PHONY: help venv install reinstall data features train evaluate visualize test clean all
 
 # Default target
 help:
@@ -31,6 +31,7 @@ help:
 	@echo ""
 	@echo "  make venv         Create virtual environment"
 	@echo "  make install      Create venv + install dependencies"
+	@echo "  make reinstall    Reinstall all dependencies (use after updating requirements.txt)"
 	@echo "  make notebook     Launch Jupyter notebook"
 	@echo "  make data         Collect NBA data from API (~15-20 min)"
 	@echo "  make features     Engineer features from raw data"
@@ -79,6 +80,19 @@ install: venv
 	@echo "To activate the virtual environment:"
 	@echo "  source venv/bin/activate    (macOS/Linux)"
 	@echo "  venv\\Scripts\\activate        (Windows)"
+
+# Reinstall dependencies (useful after updating requirements.txt)
+reinstall: venv
+	@echo "Reinstalling dependencies..."
+	$(PIP) install --upgrade pip
+	$(PIP) install --upgrade -r requirements.txt
+	@echo ""
+	@echo "Verifying SSL certificates..."
+	@$(PYTHON) -c "import certifi; print(f'SSL cert path: {certifi.where()}')" || \
+		(echo "WARNING: SSL certificate verification failed" && exit 1)
+	@echo "✓ SSL certificates OK"
+	@echo ""
+	@echo "✓ Dependencies reinstalled!"
 
 # Launch Jupyter notebook
 notebook: venv

@@ -39,8 +39,10 @@ models/*
 # Results (generated, can be recreated)
 results/figures/*
 results/metrics/*
+results/predictions/*
 !results/figures/.gitkeep
 !results/metrics/.gitkeep
+!results/predictions/.gitkeep
 
 # IDE
 .vscode/
