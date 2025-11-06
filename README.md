@@ -1094,18 +1094,50 @@ After running `make all`, you'll have:
 
 ### **Testing**
 
+This project includes a comprehensive test suite covering data leakage prevention and model validation.
+
 ```bash
-# Run all tests
+# Run all tests (10 total)
 make test
 
-# Specific tests
-pytest tests/test_features.py -v           # Feature engineering tests
-pytest tests/test_models.py -v             # Model training tests
-pytest tests/test_pipeline.py -v           # End-to-end pipeline tests
+# Run specific test suites
+pytest tests/test_data_leakage.py -v    # 5 tests: data leakage prevention
+pytest tests/test_models.py -v          # 5 tests: model validation
 
 # Check code quality
 make lint    # flake8 + black check
-make format  # Auto-format code with black
+```
+
+**Test Coverage:**
+- ✅ **Data Leakage Prevention (5 tests)** - Ensures no future data leaks into training
+  - Rolling averages use `.shift(1)`
+  - Train/test splits maintain chronological order
+  - Player features not cross-contaminated
+  - First games have no features (NaN)
+  - No shuffling in time series
+
+- ✅ **Model Validation (5 tests)** - Ensures model integrity
+  - All 3 models exist and loadable
+  - Predictions in realistic ranges (0-100 PTS)
+  - Models expect 65 features
+  - Model metadata valid
+  - Models beat baseline performance
+
+**All 10 tests passing:**
+```bash
+$ make test
+======================== test session starts ========================
+tests/test_data_leakage.py::test_rolling_average_uses_shift PASSED       [ 10%]
+tests/test_data_leakage.py::test_no_future_data_in_training PASSED       [ 20%]
+tests/test_data_leakage.py::test_player_specific_features_no_cross_contamination PASSED [ 30%]
+tests/test_data_leakage.py::test_feature_values_are_from_past_only PASSED [ 40%]
+tests/test_data_leakage.py::test_no_shuffle_in_time_series PASSED        [ 50%]
+tests/test_models.py::test_models_exist PASSED                           [ 60%]
+tests/test_models.py::test_predictions_in_reasonable_range PASSED        [ 70%]
+tests/test_models.py::test_feature_count_consistency PASSED              [ 80%]
+tests/test_models.py::test_model_metadata_exists PASSED                  [ 90%]
+tests/test_models.py::test_baseline_vs_model_improvement PASSED          [100%]
+======================== 10 passed in 5.51s ========================
 ```
 
 ### **Dashboard (Optional)**
@@ -1173,33 +1205,32 @@ NBA-Player-Predictions/
 │   └── predictions/                # Performance metrics (JSON)
 │       └── baseline_linear_results.json
 │
-├── src/                            # Production code (for automation)
-│   ├── collect.py                  # Data collection script
-│   ├── clean.py                    # Data cleaning
-│   ├── features.py                 # Feature engineering
-│   ├── train.py                    # Model training
-│   ├── evaluate.py                 # Evaluation metrics
-│   ├── visualize.py                # Plotting functions
-│   └── utils.py                    # Helper functions
+├── src/                            # Utility modules (for future CLI - Option B)
+│   ├── __init__.py                 # Package initialization
+│   └── utils.py                    # Helper functions (time splits, I/O)
 │
-├── tests/                          # Test suite
-│   ├── test_features.py            # Feature engineering tests
-│   ├── test_models.py              # Model training tests
-│   └── test_pipeline.py            # End-to-end tests
+├── tests/                          # Test suite (10 tests, all passing)
+│   ├── __init__.py                 # Package initialization
+│   ├── test_data_leakage.py        # 5 tests: data leakage prevention
+│   └── test_models.py              # 5 tests: model validation
 │
 ├── .github/workflows/              # CI/CD
 │   └── ci.yml                      # GitHub Actions (pytest, linting)
 │
-├── Makefile                        # Build automation
+├── Makefile                        # Build automation (executes notebooks)
 ├── requirements.txt                # Pinned dependencies
-├── config.yaml                     # Configuration (seasons, features, etc.)
-├── app.py                          # Streamlit dashboard (optional)
-├── README.md                       # This file
+├── README.md                       # This file (final report)
 ├── GOALS.md                        # Performance tiers & success criteria
 ├── CLAUDE.md                       # Technical decisions & context
+├── VIDEO_SCRIPT.md                 # 10-minute presentation template
+├── CLI_IMPLEMENTATION_GUIDE.md     # Roadmap for Option B (future work)
 ├── MidtermReport.md                # Previous implementation (Oct 2025)
 └── .gitignore                      # Ignore data/, models/, venv/
 ```
+
+**Note:** This project uses a **notebook-based approach** (standard for academic ML projects). All data collection, feature engineering, modeling, and evaluation are implemented in Jupyter notebooks. The `Makefile` executes these notebooks programmatically for reproducibility.
+
+For a production CLI implementation (Option B), see `CLI_IMPLEMENTATION_GUIDE.md`.
 
 ---
 

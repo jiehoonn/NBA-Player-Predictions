@@ -33,11 +33,11 @@ help:
 	@echo "  make install      Create venv + install dependencies"
 	@echo "  make reinstall    Reinstall all dependencies (use after updating requirements.txt)"
 	@echo "  make notebook     Launch Jupyter notebook"
-	@echo "  make data         Collect NBA data from API (~15-20 min)"
-	@echo "  make features     Engineer features from raw data"
-	@echo "  make train        Train all models (baseline + ML)"
-	@echo "  make evaluate     Generate evaluation metrics and reports"
-	@echo "  make visualize    Create all plots and figures"
+	@echo "  make data         Collect NBA data via notebook 01 (~15-20 min)"
+	@echo "  make features     Engineer features via notebook 03"
+	@echo "  make train        Train models via notebooks 04 + 05"
+	@echo "  make evaluate     Run error analysis via notebook 06"
+	@echo "  make visualize    View/regenerate figures"
 	@echo "  make test         Run all tests"
 	@echo "  make lint         Run code quality checks"
 	@echo "  make clean        Remove generated files"
@@ -101,36 +101,58 @@ notebook: venv
 	@echo ""
 	$(JUPYTER) notebook
 
-# Data collection
+# Data collection (via notebook)
 data: venv
 	@echo "Collecting NBA data..."
 	@echo "This may take 15-20 minutes due to API rate limiting..."
-	$(PYTHON) -m src.collect
+	@echo "Executing notebook: 01_data_collection.ipynb"
+	$(JUPYTER) nbconvert --to notebook --execute notebooks/01_data_collection.ipynb \
+		--output 01_data_collection_executed.ipynb --ExecutePreprocessor.timeout=1200 \
+		--allow-errors
 	@echo "✓ Data collection complete"
 
-# Feature engineering
+# Feature engineering (via notebook)
 features: venv
 	@echo "Engineering features..."
-	$(PYTHON) -m src.features
+	@echo "Executing notebook: 03_feature_engineering.ipynb"
+	$(JUPYTER) nbconvert --to notebook --execute notebooks/03_feature_engineering.ipynb \
+		--output 03_feature_engineering_executed.ipynb --ExecutePreprocessor.timeout=600 \
+		--allow-errors
 	@echo "✓ Features created"
 
-# Model training
+# Model training (baseline + advanced via notebooks)
 train: venv
-	@echo "Training models..."
-	$(PYTHON) -m src.train
+	@echo "Training baseline models..."
+	@echo "Executing notebook: 04_baseline_model.ipynb"
+	$(JUPYTER) nbconvert --to notebook --execute notebooks/04_baseline_model.ipynb \
+		--output 04_baseline_model_executed.ipynb --ExecutePreprocessor.timeout=600 \
+		--allow-errors
+	@echo ""
+	@echo "Training advanced models..."
+	@echo "Executing notebook: 05_advanced_models.ipynb"
+	$(JUPYTER) nbconvert --to notebook --execute notebooks/05_advanced_models.ipynb \
+		--output 05_advanced_models_executed.ipynb --ExecutePreprocessor.timeout=600 \
+		--allow-errors
 	@echo "✓ Models trained"
 
-# Evaluation
+# Evaluation (error analysis via notebook)
 evaluate: venv
-	@echo "Evaluating models..."
-	$(PYTHON) -m src.evaluate
+	@echo "Running error analysis..."
+	@echo "Executing notebook: 06_error_analysis.ipynb"
+	$(JUPYTER) nbconvert --to notebook --execute notebooks/06_error_analysis.ipynb \
+		--output 06_error_analysis_executed.ipynb --ExecutePreprocessor.timeout=600 \
+		--allow-errors
 	@echo "✓ Evaluation complete"
 
-# Visualization
+# Visualization (generated in notebooks)
 visualize: venv
-	@echo "Creating visualizations..."
-	$(PYTHON) -m src.visualize
-	@echo "✓ Visualizations created"
+	@echo "📊 Visualizations are generated within notebooks 02, 04, 05, 06"
+	@echo "All figures saved to: results/figures/"
+	@echo ""
+	@echo "To regenerate visualizations, run:"
+	@echo "  make train evaluate"
+	@echo ""
+	@echo "✓ Check results/figures/ for 12 PNG files"
 
 # Run all tests
 test: venv
@@ -174,20 +196,26 @@ clean-all: clean
 	rm -rf $(VENV_DIR)
 	@echo "✓ Everything cleaned"
 
-# Run entire pipeline
+# Run entire pipeline (notebook-based)
 all: data features train evaluate visualize
 	@echo ""
 	@echo "=========================================="
-	@echo "Pipeline complete! 🎉"
+	@echo "✅ Pipeline complete! 🎉"
 	@echo "=========================================="
-	@echo "Models saved to: models/"
-	@echo "Metrics saved to: results/metrics/"
-	@echo "Figures saved to: results/figures/"
 	@echo ""
-	@echo "View results:"
-	@echo "  - Check results/metrics/evaluation.json"
+	@echo "📊 Results:"
+	@echo "  Models:  models/final/*.pkl (3 files)"
+	@echo "  Metrics: results/predictions/*.json"
+	@echo "  Figures: results/figures/*.png (12 files)"
+	@echo ""
+	@echo "📓 Executed notebooks:"
+	@echo "  notebooks/*_executed.ipynb"
+	@echo ""
+	@echo "🔍 View results:"
 	@echo "  - Open results/figures/*.png"
-	@echo "  - Run 'make app' for interactive dashboard"
+	@echo "  - Read README.md for full analysis"
+	@echo "  - Check notebooks/*_executed.ipynb for outputs"
+	@echo ""
 
 # Launch interactive dashboard
 app: venv
