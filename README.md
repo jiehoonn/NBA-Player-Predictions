@@ -1220,11 +1220,6 @@ NBA-Player-Predictions/
 ├── Makefile                        # Build automation (executes notebooks)
 ├── requirements.txt                # Pinned dependencies
 ├── README.md                       # This file (final report)
-├── GOALS.md                        # Performance tiers & success criteria
-├── CLAUDE.md                       # Technical decisions & context
-├── VIDEO_SCRIPT.md                 # 10-minute presentation template
-├── CLI_IMPLEMENTATION_GUIDE.md     # Roadmap for Option B (future work)
-├── MidtermReport.md                # Previous implementation (Oct 2025)
 └── .gitignore                      # Ignore data/, models/, venv/
 ```
 
@@ -1272,13 +1267,6 @@ For a production CLI implementation (Option B), see `CLI_IMPLEMENTATION_GUIDE.md
 - ESPN's BPI: ~4.5 MAE for PTS
 - Our result (4.951 MAE) is **competitive with industry benchmarks** given limited features
 
-### **Project Documentation**
-- `GOALS.md` - Performance tiers, success criteria, benchmarks
-- `CLAUDE.md` - Technical decisions, development log, context
-- `MidtermReport.md` - Previous implementation (Oct 2025), lessons learned
-- `FEATURE_REVIEW.md` - Feature engineering decisions
-- `REORGANIZATION_COMPLETE.md` - Project restructuring notes
-
 ### **Tools & Libraries**
 - [scikit-learn User Guide](https://scikit-learn.org/stable/user_guide.html)
 - [XGBoost Documentation](https://xgboost.readthedocs.io/)
@@ -1320,18 +1308,17 @@ MIT License - see LICENSE file for details.
 - **NBA Stats API Team** for providing free access to comprehensive NBA data
 - **nba_api Contributors** for maintaining the Python wrapper
 - **CS506 Course Staff** for project guidance and feedback
-- **Anthropic's Claude** for code review and documentation assistance
 
 ---
 
 ## 📧 Contact
 
-**Author:** [Your Name]
-**Email:** [your.email@example.com]
-**GitHub:** [@YourUsername](https://github.com/YourUsername)
-**LinkedIn:** [Your Profile](https://www.linkedin.com/in/yourprofile)
+**Author:** Jiehoon Lee
+**Email:** jiehoonn@bu.edu
+**GitHub:** [jiehoonn](https://github.com/jiehoonn)
+**LinkedIn:** [Profile](https://www.linkedin.com/in/jiehoonlee2002)
 
-**Project Link:** [https://github.com/YourUsername/NBA-Player-Predictions](https://github.com/YourUsername/NBA-Player-Predictions)
+**Project Link:** [https://github.com/jiehoonn/NBA-Player-Predictions](https://github.com/jiehoonn/NBA-Player-Predictions)
 
 ---
 

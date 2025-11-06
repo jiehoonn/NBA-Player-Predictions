@@ -2,6 +2,9 @@
 Test suite for model validation and predictions.
 
 Tests ensure models produce reasonable predictions and are properly saved/loaded.
+
+NOTE: These tests require trained models and processed data, which are gitignored.
+They will be skipped in CI/CD (GitHub Actions) but run locally after `make all`.
 """
 
 import pytest
@@ -10,7 +13,42 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+# Check if required files exist (for conditional test skipping)
+MODELS_DIR = Path('models/final')
+DATA_DIR = Path('data/processed')
 
+models_exist = (
+    (MODELS_DIR / 'best_model_pts.pkl').exists() and
+    (MODELS_DIR / 'best_model_reb.pkl').exists() and
+    (MODELS_DIR / 'best_model_ast.pkl').exists()
+)
+
+data_exists = (DATA_DIR / 'reduced_feature_names.json').exists()
+metadata_exists = (MODELS_DIR / 'best_models_metadata.json').exists()
+baseline_exists = Path('results/predictions/baseline_linear_results.json').exists()
+
+skip_if_no_models = pytest.mark.skipif(
+    not models_exist,
+    reason="Models not found (gitignored). Run 'make all' to generate."
+)
+
+skip_if_no_data = pytest.mark.skipif(
+    not data_exists,
+    reason="Processed data not found (gitignored). Run 'make all' to generate."
+)
+
+skip_if_no_metadata = pytest.mark.skipif(
+    not metadata_exists,
+    reason="Model metadata not found (gitignored). Run 'make all' to generate."
+)
+
+skip_if_no_baseline = pytest.mark.skipif(
+    not baseline_exists,
+    reason="Baseline results not found (gitignored). Run 'make all' to generate."
+)
+
+
+@skip_if_no_models
 def test_models_exist():
     """Test that final models are saved and loadable."""
     models_dir = Path('models/final')
@@ -36,6 +74,7 @@ def test_models_exist():
     print("✅ Test passed: All 3 models exist and are loadable")
 
 
+@skip_if_no_models
 def test_predictions_in_reasonable_range():
     """Test that model predictions are within realistic NBA stat ranges."""
     models_dir = Path('models/final')
@@ -76,6 +115,8 @@ def test_predictions_in_reasonable_range():
     print(f"✅ Test passed: Predictions in range [-10, 100], mean={mean_pred:.1f} PTS")
 
 
+@skip_if_no_models
+@skip_if_no_data
 def test_feature_count_consistency():
     """Test that models expect 65 features."""
     models_dir = Path('models/final')
@@ -111,6 +152,7 @@ def test_feature_count_consistency():
     print(f"✅ Test passed: Models correctly expect {expected_count} features")
 
 
+@skip_if_no_metadata
 def test_model_metadata_exists():
     """Test that model metadata JSON exists and is valid."""
     metadata_path = Path('models/final/best_models_metadata.json')
@@ -141,6 +183,8 @@ def test_model_metadata_exists():
     print("✅ Test passed: Model metadata is valid")
 
 
+@skip_if_no_metadata
+@skip_if_no_baseline
 def test_baseline_vs_model_improvement():
     """Test that models beat baseline (5-game rolling average)."""
     metadata_path = Path('models/final/best_models_metadata.json')
